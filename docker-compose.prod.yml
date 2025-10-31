@@ -64,7 +64,7 @@ services:
       # Database
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
-      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_USERNAME: ${POSTGRES_USER:-postgres}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_NAME: ${POSTGRES_DB:-qdrant_catalog_sync}
       # Redis

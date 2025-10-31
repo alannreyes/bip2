@@ -1,6 +1,19 @@
-# 🗄️ Qdrant Catalog Sync Platform
+# 🗄️ BIP2 - Sistema de Búsqueda Inteligente de Productos
 
 Sistema de gestión de catálogos vectoriales multi-fuente con búsqueda semántica usando Qdrant, Gemini AI y NestJS.
+
+---
+
+## 🚀 Para DevOps / Deployment en Producción
+
+**¿Vas a desplegar este sistema en producción?** Sigue estos documentos en orden:
+
+1. **[DEVOPS_CHECKLIST.md](./DEVOPS_CHECKLIST.md)** - Checklist completo paso a paso
+2. **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Guía detallada de deployment
+3. **[POST_DEPLOYMENT_GUIDE.md](./POST_DEPLOYMENT_GUIDE.md)** - Configuración post-deployment (CRÍTICO)
+4. **[QUICK_START.md](./QUICK_START.md)** - Referencia rápida
+
+**⚠️ IMPORTANTE:** La aplicación NO es funcional hasta completar `POST_DEPLOYMENT_GUIDE.md`
 
 ---
 
