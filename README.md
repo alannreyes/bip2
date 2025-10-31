@@ -140,6 +140,28 @@ npm run start:dev
 
 ## 📚 API Endpoints
 
+### 📖 Documentación Interactiva (Swagger)
+
+La documentación completa de la API está disponible en:
+
+**Desarrollo:**
+```
+http://localhost:3001/api/docs
+```
+
+**Producción:**
+```
+https://api.TU_DOMINIO/api/docs
+```
+
+La interfaz Swagger permite:
+- Ver todos los endpoints disponibles
+- Probar los endpoints directamente desde el navegador
+- Ver esquemas de request/response
+- Exportar la especificación OpenAPI
+
+### Endpoints Principales
+
 ### Health Check
 ```
 GET /api/health              - Health check completo

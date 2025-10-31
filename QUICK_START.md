@@ -59,9 +59,10 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ### 5. Acceder
 
-- Frontend: `https://TU_DOMINIO`
-- Backend API: `https://api.TU_DOMINIO/api`
-- Traefik Dashboard: `https://traefik.TU_DOMINIO` (requiere auth)
+- **Frontend**: `https://TU_DOMINIO`
+- **Backend API**: `https://api.TU_DOMINIO/api`
+- **Documentación API (Swagger)**: `https://api.TU_DOMINIO/api/docs`
+- **Traefik Dashboard**: `https://traefik.TU_DOMINIO` (requiere auth)
 
 ## 📋 Comandos Útiles
 

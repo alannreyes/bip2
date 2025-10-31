@@ -212,6 +212,15 @@ Para verificar:
 docker logs bip-backend | grep Migration
 ```
 
+### 7. Acceder a la Aplicación
+
+Una vez desplegado, podrás acceder a:
+
+- **Frontend**: `https://bip.tuempresa.com`
+- **Backend API**: `https://api.bip.tuempresa.com/api`
+- **Documentación API (Swagger)**: `https://api.bip.tuempresa.com/api/docs`
+- **Health Check**: `https://api.bip.tuempresa.com/api/health`
+
 ## 🔧 Configuración Post-Despliegue
 
 ### 1. Crear Primer Data Source
