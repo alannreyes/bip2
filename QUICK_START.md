@@ -15,7 +15,7 @@ newgrp docker
 
 ```bash
 # Clonar repositorio
-git clone <tu-repo-url> bip2
+git clone https://github.com/alannreyes/bip2.git
 cd bip2
 
 # Configurar variables de entorno

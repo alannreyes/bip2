@@ -69,8 +69,8 @@ Opción B - Agregar el campo (RECOMENDADO para sync incremental):
 Primero, verifica que puedas conectarte a la base de datos:
 
 ```bash
-# Desde tu máquina o servidor con acceso a 192.168.40.251
-sqlcmd -S 192.168.40.251 -U BIP -P "Thrg6587$%" -d EFC_DB_PROD -Q "SELECT TOP 5 Articulo_Codigo FROM Vista_Articulos"
+# Desde tu máquina o servidor con acceso al servidor SQL
+sqlcmd -S TU_SQL_SERVER -U TU_USUARIO -P "TU_PASSWORD" -d EFC_DB_PROD -Q "SELECT TOP 5 Articulo_Codigo FROM Vista_Articulos"
 ```
 
 ### Paso 2: Crear el Datasource vía API
@@ -314,12 +314,12 @@ syncSchedule: "0 2 * * *"  // 2 AM diariamente
 
 ### Error: Connection Timeout
 
-**Problema**: No puede conectarse a 192.168.40.251
+**Problema**: No puede conectarse al servidor SQL
 
 **Soluciones:**
 1. Verifica firewall permite puerto 1433
 2. Verifica que el servidor backend tenga acceso a la red de MS SQL
-3. Prueba conexión manual con `sqlcmd` o `telnet 192.168.40.251 1433`
+3. Prueba conexión manual con `sqlcmd` o `telnet TU_SQL_SERVER 1433`
 
 ### Error: Invalid Object Name 'Vista_Articulos'
 

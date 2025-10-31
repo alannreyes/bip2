@@ -96,8 +96,8 @@ Accede a Portainer: `http://TU_IP_SERVIDOR:9000`
 mkdir -p ~/proyectos
 cd ~/proyectos
 
-# Clonar repositorio (ajusta la URL)
-git clone https://github.com/tuempresa/bip2.git
+# Clonar repositorio
+git clone https://github.com/alannreyes/bip2.git
 cd bip2
 ```
 

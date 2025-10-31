@@ -85,7 +85,7 @@ QDRANT_HOST=192.168.2.6
 QDRANT_PORT=6333
 
 # Gemini API
-GEMINI_API_KEY=AIzaSyCjvj7BHkpcbglS4s7UgAFUMTDa0Mzb5oo
+GEMINI_API_KEY=tu_api_key_de_gemini_aqui
 
 # Microsoft Entra ID (configurar después de crear app en Azure)
 AZURE_AD_CLIENT_ID=your-client-id
