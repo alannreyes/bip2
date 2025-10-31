@@ -1,0 +1,118 @@
+{
+  "version": "1.0.0",
+  "collectionName": "global",
+  "description": "Reglas por defecto para detección de duplicados",
+  "updatedAt": "2025-10-18T21:00:00Z",
+
+  "colorWords": {
+    "enabled": true,
+    "description": "Palabras de colores que indican variantes",
+    "words": [
+      "negro", "negra", "negros", "negras",
+      "blanco", "blanca", "blancos", "blancas",
+      "rojo", "roja", "rojos", "rojas",
+      "azul", "azules",
+      "amarillo", "amarilla", "amarillos", "amarillas",
+      "verde", "verdes",
+      "gris", "grises",
+      "naranja", "naranjas",
+      "morado", "morada", "morados", "moradas",
+      "rosa", "rosas",
+      "cafe", "cafes", "marron", "marrón", "marrones",
+      "plomo", "plomos",
+      "beige", "beis",
+      "violeta", "violetas",
+      "celeste", "celestes",
+      "turquesa", "turquesas",
+      "fucsia", "fucsias",
+      "lila", "lilas",
+      "c/negro", "c/blanco", "c/rojo", "c/azul", "c/amarillo", "c/verde", "c/gris",
+      "color negro", "color blanco", "color rojo", "color azul", "color amarillo", "color verde"
+    ]
+  },
+
+  "variantTypeWords": {
+    "enabled": true,
+    "description": "Palabras que indican tipos de variantes (macho/hembra, fijo/giratorio)",
+    "words": [
+      "macho", "hembra",
+      "fijo", "fija", "fijos", "fijas",
+      "giratorio", "giratoria", "giratorios", "giratorias"
+    ]
+  },
+
+  "patterns": {
+    "removeConSin": {
+      "enabled": true,
+      "description": "Con/Sin accesorios (C/MANGO, S/MANGO, C/TAPA, S/TAPA)",
+      "regex": "\\b[cs]\\/"
+    },
+    "removeMaterialGrades": {
+      "enabled": true,
+      "description": "Grados de material (C-304, C-316, G-8)",
+      "regex": "\\b[cg]-\\d+"
+    },
+    "removeThreadTypes": {
+      "enabled": true,
+      "description": "Tipos de rosca (UNC, UNF, HILO CORRIDO)",
+      "patterns": ["\\bunc\\b", "\\bunf\\b", "\\bhilo\\s+corrido\\b"]
+    },
+    "removeProductTypes": {
+      "enabled": true,
+      "description": "Tipos de producto (SP, CR, TIPO I, TIPO II)",
+      "patterns": ["\\b(sp|cr)\\b", "\\btipo\\s+[ivx]+\\b"]
+    },
+    "removeModelVariations": {
+      "enabled": true,
+      "description": "Variaciones de modelo (MOD., MODELO)",
+      "patterns": ["\\bmod\\.\\s*", "\\bmodelo\\s+"]
+    },
+    "removeShoeWidths": {
+      "enabled": true,
+      "description": "Anchos de calzado (W, M, D, EE, EEE en tallas US)",
+      "regex": "\\(\\d+\\s*[\"']?\\s*([wmdee]{1,3})\\s*[\"']?\\s*us\\)"
+    },
+    "removeQuantityUnits": {
+      "enabled": true,
+      "description": "Cantidad + unidad de palabras (1 OREJA, 2 OREJAS, 2 CUERPOS)",
+      "regex": "\\b\\d+\\s+(oreja|orejas|cuerpo|cuerpos)\\b"
+    },
+    "removeSerialNumbers": {
+      "enabled": true,
+      "description": "Números de serie (SERIE: 12345)",
+      "regex": "\\bserie:\\s*\\S+"
+    },
+    "removeAccessories": {
+      "enabled": true,
+      "description": "Accesorios (CON TAPA, SIN ASA, CON VERTEDOR, etc.)",
+      "patterns": [
+        "\\bcon\\s+(tapa|asa|asas|vertedor|punta|logo|rotulado|cierre)",
+        "\\bsin\\s+(tapa|asa|asas|vertedor|punta|logo|rotulado|cierre)"
+      ]
+    },
+    "removeUsageLabels": {
+      "enabled": true,
+      "description": "Etiquetas de uso específico (BICONTAMINADOS, QUIMICOS, HIDROCARBUROS)",
+      "regex": "\\b(bicontaminados|quimicos|químicos|hidrocarburos|peligrosos)\\b"
+    },
+    "removeSizesTalla": {
+      "enabled": true,
+      "description": "Tallas con letras (TALLA S, TALLA M, TALLA L, TALLA XL)",
+      "regex": "talla\\s*[\"']?\\s*([smlx]{1,4})[\"']?"
+    },
+    "removePackagingQuantities": {
+      "enabled": true,
+      "description": "Cantidades de empaque (PQT X 10, CAJA X 36, BOLSA X 100)",
+      "regex": "\\b(pqt|paquete|caja|bolsa|envase|frasco)\\s+x\\s+\\d+\\w*"
+    }
+  },
+
+  "customPatterns": [],
+
+  "strategy": {
+    "useManufacturerCode": true,
+    "useDescriptionNormalization": true,
+    "minNormalizedLength": 10,
+    "description": "Estrategia para detección de variantes"
+  }
+}
