@@ -59,6 +59,8 @@ Checklist paso a paso para DevOps. Marca cada item al completarlo.
 
 ### Configurar Variables de Entorno
 
+**📖 Ver guía completa:** `ENV_PRODUCTION_GUIDE.md`
+
 ```bash
 - [ ] cp .env.production.example .env.production
 - [ ] nano .env.production

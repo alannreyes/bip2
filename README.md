@@ -10,8 +10,9 @@ Sistema de gestión de catálogos vectoriales multi-fuente con búsqueda semánt
 
 1. **[DEVOPS_CHECKLIST.md](./DEVOPS_CHECKLIST.md)** - Checklist completo paso a paso
 2. **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Guía detallada de deployment
-3. **[POST_DEPLOYMENT_GUIDE.md](./POST_DEPLOYMENT_GUIDE.md)** - Configuración post-deployment (CRÍTICO)
-4. **[QUICK_START.md](./QUICK_START.md)** - Referencia rápida
+3. **[ENV_PRODUCTION_GUIDE.md](./ENV_PRODUCTION_GUIDE.md)** - Cómo configurar .env.production
+4. **[POST_DEPLOYMENT_GUIDE.md](./POST_DEPLOYMENT_GUIDE.md)** - Configuración post-deployment (CRÍTICO)
+5. **[QUICK_START.md](./QUICK_START.md)** - Referencia rápida
 
 **⚠️ IMPORTANTE:** La aplicación NO es funcional hasta completar `POST_DEPLOYMENT_GUIDE.md`
 
