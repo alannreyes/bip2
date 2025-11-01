@@ -538,6 +538,230 @@ IMPORTANTE:
   }
 
   /**
+   * PHASE 1: Fast basic product information (3-4 seconds)
+   * Returns essential information for immediate display
+   */
+  async searchProductPhase1(descripcionProducto: string, efcProductsInfo?: any[]): Promise<any> {
+    try {
+      this.logger.log(`[PHASE 1] Fast basic search: ${descripcionProducto}`);
+      if (efcProductsInfo && efcProductsInfo.length > 0) {
+        this.logger.log(`[PHASE 1] Found ${efcProductsInfo.length} matching products in EFC catalog`);
+      }
+
+      // Import the new SDK dynamically
+      const { GoogleGenAI } = await import('@google/genai');
+
+      // Initialize the new Google Gen AI client
+      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+      // Configure Google Search Grounding tool
+      const groundingTool = {
+        googleSearch: {},
+      };
+
+      const config = {
+        tools: [groundingTool],
+        generationConfig: {
+          temperature: 0.3,
+          topP: 0.8,
+          topK: 20,
+          maxOutputTokens: 1536, // Reduced from 4096 for faster response
+        },
+      };
+
+      // Build context about EFC products if we have them
+      let efcContext = '';
+      if (efcProductsInfo && efcProductsInfo.length > 0) {
+        efcContext = `\n\n**PRODUCTOS EN CATÁLOGO EFC**: ${efcProductsInfo.map((p, i) => `${i + 1}. ${p.descripcion} (${p.marca || 'N/A'})`).join(', ')}`;
+      }
+
+      const prompt = `Busca RÁPIDAMENTE información ESENCIAL sobre este producto para procurement en Perú.
+
+PRODUCTO: "${descripcionProducto}"${efcContext}
+
+Responde SOLO con JSON válido (sin markdown):
+{
+  "resultados_efc": {
+    "encontrado_en_efc": ${efcProductsInfo && efcProductsInfo.length > 0 ? 'true' : 'false'},
+    "productos_efc": [${efcProductsInfo && efcProductsInfo.length > 0 ? '{"nombre": "nombre del producto", "codigo": "código", "descripcion": "breve"}' : ''}],
+    "mensaje": "mensaje breve"
+  },
+  "producto_confirmado": {
+    "nombre_comercial": "Nombre del producto",
+    "marca": "Marca o fabricante",
+    "categoria": "Categoría",
+    "uso_principal": "Para qué se usa (1 línea)",
+    "especificaciones_clave": "Specs principales (1 línea)"
+  },
+  "proveedores_top": [
+    {
+      "nombre": "Proveedor principal",
+      "pais": "Perú",
+      "tipo": "distribuidor|fabricante",
+      "url": "URL exacta"
+    }
+  ],
+  "validacion": {
+    "producto_encontrado": true/false,
+    "confianza": 0-100
+  }
+}
+
+IMPORTANTE:
+- Solo top 3 proveedores más relevantes
+- Información concisa y directa
+- Prioriza resultados de Perú
+- ${efcProductsInfo && efcProductsInfo.length > 0 ? 'YA tenemos productos en EFC, inclúyelos' : 'No encontramos en EFC'}`;
+
+      // Call the API
+      const result = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+      });
+
+      const text = result.text.trim();
+      let jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      let searchResults;
+      try {
+        searchResults = JSON.parse(jsonText);
+      } catch (parseError) {
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const cleanedJson = jsonMatch[0]
+            .replace(/,(\s*[}\]])/g, '$1')
+            .replace(/\/\/.*$/gm, '')
+            .replace(/\/\*[\s\S]*?\*\//g, '');
+          searchResults = JSON.parse(cleanedJson);
+        } else {
+          throw parseError;
+        }
+      }
+
+      this.logger.log(`[PHASE 1] Completed successfully`);
+      return searchResults;
+    } catch (error) {
+      this.logger.error(`[PHASE 1] Failed: ${error.message}`);
+      return {
+        resultados_efc: {
+          encontrado_en_efc: efcProductsInfo && efcProductsInfo.length > 0,
+          productos_efc: [],
+          mensaje: 'Error en búsqueda rápida',
+        },
+        producto_confirmado: null,
+        proveedores_top: [],
+        validacion: {
+          producto_encontrado: false,
+          confianza: 0,
+        },
+      };
+    }
+  }
+
+  /**
+   * PHASE 2: Detailed information enrichment (5-6 seconds)
+   * Returns detailed contact info, pricing, and additional data
+   */
+  async searchProductPhase2(descripcionProducto: string, phase1Results: any): Promise<any> {
+    try {
+      this.logger.log(`[PHASE 2] Detailed enrichment: ${descripcionProducto}`);
+
+      // Import the new SDK dynamically
+      const { GoogleGenAI } = await import('@google/genai');
+
+      // Initialize the new Google Gen AI client
+      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+      // Configure Google Search Grounding tool
+      const groundingTool = {
+        googleSearch: {},
+      };
+
+      const config = {
+        tools: [groundingTool],
+        generationConfig: {
+          temperature: 0.3,
+          topP: 0.8,
+          topK: 20,
+          maxOutputTokens: 2048, // Reduced from 4096
+        },
+      };
+
+      const prompt = `Enriquece esta información de producto con DETALLES ADICIONALES para cotización.
+
+PRODUCTO: "${descripcionProducto}"
+INFO BÁSICA YA OBTENIDA: ${JSON.stringify(phase1Results.producto_confirmado)}
+
+Busca y proporciona SOLO JSON válido (sin markdown):
+{
+  "contactos_proveedores": [
+    {
+      "nombre": "Nombre proveedor",
+      "telefono": "Teléfono con código",
+      "email": "Email ventas",
+      "whatsapp": "WhatsApp si hay",
+      "precio_referencial": "Precio aprox si hay"
+    }
+  ],
+  "alternativas": [
+    {
+      "nombre": "Producto alternativo",
+      "marca": "Marca",
+      "razon": "Por qué es alternativa válida"
+    }
+  ],
+  "info_tecnica": {
+    "ficha_tecnica_url": "URL PDF si hay",
+    "certificaciones": "Certificaciones principales si hay"
+  }
+}
+
+IMPORTANTE:
+- Enfócate en contactos útiles para cotizar
+- Precios referenciales si están disponibles
+- Máximo 5 proveedores
+- Máximo 3 alternativas`;
+
+      // Call the API
+      const result = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+      });
+
+      const text = result.text.trim();
+      let jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      let detailedResults;
+      try {
+        detailedResults = JSON.parse(jsonText);
+      } catch (parseError) {
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const cleanedJson = jsonMatch[0]
+            .replace(/,(\s*[}\]])/g, '$1')
+            .replace(/\/\/.*$/gm, '')
+            .replace(/\/\*[\s\S]*?\*\//g, '');
+          detailedResults = JSON.parse(cleanedJson);
+        } else {
+          throw parseError;
+        }
+      }
+
+      this.logger.log(`[PHASE 2] Completed successfully`);
+      return detailedResults;
+    } catch (error) {
+      this.logger.error(`[PHASE 2] Failed: ${error.message}`);
+      return {
+        contactos_proveedores: [],
+        alternativas: [],
+        info_tecnica: {},
+      };
+    }
+  }
+
+  /**
    * Search for product information on the internet using Gemini with Google Search Grounding
    * Uses the new @google/genai SDK with real-time Google Search
    */
@@ -776,6 +1000,296 @@ Responde SOLO con el JSON válido completo, sin markdown ni comentarios adiciona
           advertencias: `Error en búsqueda: ${error.message}`,
         },
       };
+    }
+  }
+
+  /**
+   * PARALLEL MINI-SEARCH 1: Find suppliers in Peru
+   * Fast focused search for local suppliers (5-7s target)
+   */
+  async searchSuppliersInPeru(descripcionProducto: string, efcProductsInfo?: any[]): Promise<any> {
+    try {
+      this.logger.log(`[MINI-SEARCH 1] Searching suppliers in Peru: ${descripcionProducto}`);
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+      const config = {
+        tools: [{ googleSearch: {} }],
+        generationConfig: {
+          temperature: 0.3,
+          topP: 0.8,
+          topK: 20,
+          maxOutputTokens: 1024, // Very focused, less tokens
+        },
+      };
+
+      const efcContext = efcProductsInfo && efcProductsInfo.length > 0 ?
+        `\n\nEFC ya tiene: ${efcProductsInfo.map(p => p.descripcion).join(', ')}` : '';
+
+      const prompt = `Busca PROVEEDORES en Perú para: "${descripcionProducto}"${efcContext}
+
+Responde SOLO con JSON válido:
+{
+  "proveedores": [
+    {
+      "nombre": "Nombre empresa",
+      "tipo": "distribuidor|fabricante|importador",
+      "telefono": "Teléfono",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "url": "URL"
+    }
+  ]
+}
+
+ENFOQUE:
+- Solo proveedores de Perú
+- Top 5 más relevantes
+- Con datos de contacto reales
+- Priorizados por relevancia`;
+
+      const result = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+      });
+
+      const text = result.text.trim();
+      const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      try {
+        const parsed = JSON.parse(jsonText);
+        this.logger.log(`[MINI-SEARCH 1] Found ${parsed.proveedores?.length || 0} suppliers`);
+        return parsed;
+      } catch (parseError) {
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0].replace(/,(\s*[}\]])/g, '$1'));
+        }
+        throw parseError;
+      }
+    } catch (error) {
+      this.logger.error(`[MINI-SEARCH 1] Failed: ${error.message}`);
+      return { proveedores: [] };
+    }
+  }
+
+  /**
+   * PARALLEL MINI-SEARCH 2: Get technical specifications
+   * Fast focused search for product specs (5-6s target)
+   */
+  async searchTechnicalSpecs(descripcionProducto: string): Promise<any> {
+    try {
+      this.logger.log(`[MINI-SEARCH 2] Searching technical specs: ${descripcionProducto}`);
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+      const config = {
+        tools: [{ googleSearch: {} }],
+        generationConfig: {
+          temperature: 0.3,
+          topP: 0.8,
+          topK: 20,
+          maxOutputTokens: 1024,
+        },
+      };
+
+      const prompt = `Busca ESPECIFICACIONES TÉCNICAS de: "${descripcionProducto}"
+
+Responde SOLO con JSON válido:
+{
+  "especificaciones": {
+    "marca": "Marca",
+    "modelo": "Modelo",
+    "medidas": "Dimensiones",
+    "material": "Material",
+    "certificaciones": "Certificaciones",
+    "normas": "Normas aplicables",
+    "ficha_tecnica_url": "URL PDF ficha técnica"
+  },
+  "usos": {
+    "aplicaciones": ["Lista de aplicaciones"],
+    "industrias": ["Industrias donde se usa"]
+  }
+}
+
+ENFOQUE:
+- Especificaciones técnicas clave
+- Usos y aplicaciones
+- Certificaciones relevantes
+- URL de ficha técnica si existe`;
+
+      const result = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+      });
+
+      const text = result.text.trim();
+      const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      try {
+        const parsed = JSON.parse(jsonText);
+        this.logger.log(`[MINI-SEARCH 2] Technical specs retrieved`);
+        return parsed;
+      } catch (parseError) {
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0].replace(/,(\s*[}\]])/g, '$1'));
+        }
+        throw parseError;
+      }
+    } catch (error) {
+      this.logger.error(`[MINI-SEARCH 2] Failed: ${error.message}`);
+      return { especificaciones: {}, usos: {} };
+    }
+  }
+
+  /**
+   * PARALLEL MINI-SEARCH 3: Find reference prices
+   * Fast focused search for pricing information (6-8s target)
+   */
+  async searchReferencePrices(descripcionProducto: string): Promise<any> {
+    try {
+      this.logger.log(`[MINI-SEARCH 3] Searching reference prices: ${descripcionProducto}`);
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+      const config = {
+        tools: [{ googleSearch: {} }],
+        generationConfig: {
+          temperature: 0.3,
+          topP: 0.8,
+          topK: 20,
+          maxOutputTokens: 1024,
+        },
+      };
+
+      const prompt = `Busca PRECIOS REFERENCIALES en Perú de: "${descripcionProducto}"
+
+Responde SOLO con JSON válido:
+{
+  "precios": [
+    {
+      "proveedor": "Nombre",
+      "precio": "Precio en PEN o USD",
+      "moneda": "PEN|USD",
+      "unidad": "Unidad de venta",
+      "disponibilidad": "En stock|Bajo pedido",
+      "tiempo_entrega": "Días de entrega",
+      "url": "URL fuente"
+    }
+  ],
+  "rango_precio": {
+    "minimo": "Precio mínimo encontrado",
+    "maximo": "Precio máximo encontrado",
+    "promedio": "Precio promedio estimado",
+    "moneda": "PEN|USD"
+  }
+}
+
+ENFOQUE:
+- Precios de mercado peruano
+- Diferentes proveedores
+- Rango de precios
+- Disponibilidad actual`;
+
+      const result = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+      });
+
+      const text = result.text.trim();
+      const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      try {
+        const parsed = JSON.parse(jsonText);
+        this.logger.log(`[MINI-SEARCH 3] Found ${parsed.precios?.length || 0} price references`);
+        return parsed;
+      } catch (parseError) {
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0].replace(/,(\s*[}\]])/g, '$1'));
+        }
+        throw parseError;
+      }
+    } catch (error) {
+      this.logger.error(`[MINI-SEARCH 3] Failed: ${error.message}`);
+      return { precios: [], rango_precio: {} };
+    }
+  }
+
+  /**
+   * PARALLEL MINI-SEARCH 4: Find similar alternatives
+   * Fast focused search for alternative products (5-7s target)
+   */
+  async searchAlternatives(descripcionProducto: string): Promise<any> {
+    try {
+      this.logger.log(`[MINI-SEARCH 4] Searching alternatives: ${descripcionProducto}`);
+
+      const { GoogleGenAI } = await import('@google/genai');
+      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+      const config = {
+        tools: [{ googleSearch: {} }],
+        generationConfig: {
+          temperature: 0.3,
+          topP: 0.8,
+          topK: 20,
+          maxOutputTokens: 1024,
+        },
+      };
+
+      const prompt = `Busca PRODUCTOS ALTERNATIVOS para: "${descripcionProducto}"
+
+Responde SOLO con JSON válido:
+{
+  "alternativas": [
+    {
+      "nombre": "Nombre producto alternativo",
+      "marca": "Marca",
+      "razon": "Por qué es alternativa válida",
+      "ventajas": "Ventajas vs original",
+      "desventajas": "Desventajas vs original",
+      "compatibilidad": "Nivel de compatibilidad 0-100"
+    }
+  ]
+}
+
+ENFOQUE:
+- Solo alternativas COMPATIBLES
+- Mismo uso/aplicación
+- Marcas disponibles en Perú
+- Top 3-5 alternativas
+- Clarificar pros/cons`;
+
+      const result = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+      });
+
+      const text = result.text.trim();
+      const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      try {
+        const parsed = JSON.parse(jsonText);
+        this.logger.log(`[MINI-SEARCH 4] Found ${parsed.alternativas?.length || 0} alternatives`);
+        return parsed;
+      } catch (parseError) {
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0].replace(/,(\s*[}\]])/g, '$1'));
+        }
+        throw parseError;
+      }
+    } catch (error) {
+      this.logger.error(`[MINI-SEARCH 4] Failed: ${error.message}`);
+      return { alternativas: [] };
     }
   }
 }

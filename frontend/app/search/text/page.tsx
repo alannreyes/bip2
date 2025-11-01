@@ -42,6 +42,12 @@ export default function TextSearchPage() {
   const [internetProgress, setInternetProgress] = useState<string>('');
   const [internetError, setInternetError] = useState<string>('');
 
+  // Parallel search states - Progressive results
+  const [suppliersResults, setSuppliersResults] = useState<any>(null);
+  const [specsResults, setSpecsResults] = useState<any>(null);
+  const [pricesResults, setPricesResults] = useState<any>(null);
+  const [alternativesResults, setAlternativesResults] = useState<any>(null);
+
   // Toggle individual collection
   const toggleCollection = (collectionName: string) => {
     setSelectedCollections(prev =>
@@ -97,6 +103,52 @@ export default function TextSearchPage() {
               setQuickProductInfo(data.productInfo);
             }
             break;
+
+          // PARALLEL SEARCHES
+          case 'parallel_search_start':
+            setInternetProgress(data.message);
+            break;
+
+          case 'suppliers_search_start':
+            setInternetProgress('🔍 ' + data.message);
+            break;
+          case 'suppliers_search_complete':
+            setInternetProgress(`✅ ${data.message} (${data.duration})`);
+            setSuppliersResults(data.results);
+            break;
+
+          case 'specs_search_start':
+            setInternetProgress('📋 ' + data.message);
+            break;
+          case 'specs_search_complete':
+            setInternetProgress(`✅ ${data.message} (${data.duration})`);
+            setSpecsResults(data.results);
+            break;
+
+          case 'prices_search_start':
+            setInternetProgress('💰 ' + data.message);
+            break;
+          case 'prices_search_complete':
+            setInternetProgress(`✅ ${data.message} (${data.duration})`);
+            setPricesResults(data.results);
+            break;
+
+          case 'alternatives_search_start':
+            setInternetProgress('🔄 ' + data.message);
+            break;
+          case 'alternatives_search_complete':
+            setInternetProgress(`✅ ${data.message} (${data.duration})`);
+            setAlternativesResults(data.results);
+            break;
+
+          case 'all_searches_complete':
+            setInternetProgress(`✅ ${data.message}`);
+            setInternetResults(data.results);
+            setIsLoadingInternet(false);
+            eventSource.close();
+            break;
+
+          // LEGACY events (for backward compatibility)
           case 'internet_start':
             setInternetProgress(data.message);
             break;
@@ -106,6 +158,7 @@ export default function TextSearchPage() {
             setIsLoadingInternet(false);
             eventSource.close();
             break;
+
           case 'error':
             setInternetError(data.message);
             setIsLoadingInternet(false);
@@ -144,6 +197,11 @@ export default function TextSearchPage() {
     setSearchDuration('');
     setInternetProgress('');
     setInternetError('');
+    // Reset parallel search results
+    setSuppliersResults(null);
+    setSpecsResults(null);
+    setPricesResults(null);
+    setAlternativesResults(null);
 
     try {
       // Call semantic search endpoint (fast)
@@ -536,6 +594,96 @@ export default function TextSearchPage() {
                     </div>
                   )}
 
+                  {/* PROGRESSIVE RESULTS - Show as they arrive */}
+                  {/* Suppliers Results - Shows first (~20-25s) */}
+                  {suppliersResults && suppliersResults.proveedores && suppliersResults.proveedores.length > 0 && (
+                    <div className="mt-6 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">👥</span>
+                        <h4 className="font-bold text-purple-900">Proveedores en Perú ({suppliersResults.proveedores.length})</h4>
+                        <span className="ml-auto px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs font-semibold">NUEVO</span>
+                      </div>
+                      <div className="space-y-2">
+                        {suppliersResults.proveedores.slice(0, 3).map((proveedor: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-white border border-purple-200 rounded">
+                            <div className="font-semibold text-purple-900">{proveedor.nombre}</div>
+                            <div className="text-sm text-gray-600 mt-1">
+                              {proveedor.telefono && <div>📞 {proveedor.telefono}</div>}
+                              {proveedor.email && <div>✉️ {proveedor.email}</div>}
+                              {proveedor.whatsapp && <div>💬 {proveedor.whatsapp}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Specs Results - Shows second (~20-25s) */}
+                  {specsResults && specsResults.especificaciones && (
+                    <div className="mt-6 p-4 bg-indigo-50 border-2 border-indigo-300 rounded-lg shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">📋</span>
+                        <h4 className="font-bold text-indigo-900">Especificaciones Técnicas</h4>
+                        <span className="ml-auto px-2 py-1 bg-indigo-200 text-indigo-800 rounded text-xs font-semibold">NUEVO</span>
+                      </div>
+                      <div className="bg-white p-3 rounded border border-indigo-200 space-y-2 text-sm">
+                        {specsResults.especificaciones.marca && <div><span className="font-semibold">Marca:</span> {specsResults.especificaciones.marca}</div>}
+                        {specsResults.especificaciones.material && <div><span className="font-semibold">Material:</span> {specsResults.especificaciones.material}</div>}
+                        {specsResults.especificaciones.medidas && <div><span className="font-semibold">Medidas:</span> {specsResults.especificaciones.medidas}</div>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Alternatives Results - Shows third (~25-30s) */}
+                  {alternativesResults && alternativesResults.alternativas && alternativesResults.alternativas.length > 0 && (
+                    <div className="mt-6 p-4 bg-amber-50 border-2 border-amber-300 rounded-lg shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">🔄</span>
+                        <h4 className="font-bold text-amber-900">Alternativas Similares ({alternativesResults.alternativas.length})</h4>
+                        <span className="ml-auto px-2 py-1 bg-amber-200 text-amber-800 rounded text-xs font-semibold">NUEVO</span>
+                      </div>
+                      <div className="space-y-2">
+                        {alternativesResults.alternativas.slice(0, 3).map((alt: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-white border border-amber-200 rounded">
+                            <div className="font-semibold text-amber-900">{alt.nombre}</div>
+                            <div className="text-sm text-gray-700 mt-1">{alt.razon}</div>
+                            {alt.compatibilidad && <div className="text-xs text-amber-700 mt-1">Compatibilidad: {alt.compatibilidad}%</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Prices Results - Shows last (~35-40s) */}
+                  {pricesResults && pricesResults.precios && pricesResults.precios.length > 0 && (
+                    <div className="mt-6 p-4 bg-green-50 border-2 border-green-300 rounded-lg shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">💰</span>
+                        <h4 className="font-bold text-green-900">Precios Referenciales ({pricesResults.precios.length})</h4>
+                        <span className="ml-auto px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-semibold">NUEVO</span>
+                      </div>
+                      {pricesResults.rango_precio && (
+                        <div className="mb-3 p-2 bg-white rounded border border-green-200">
+                          <div className="text-sm font-semibold text-green-900">
+                            Rango: {pricesResults.rango_precio.moneda} {pricesResults.rango_precio.minimo} - {pricesResults.rango_precio.maximo}
+                            {pricesResults.rango_precio.promedio && <span className="ml-2 text-green-700">(Promedio: {pricesResults.rango_precio.promedio})</span>}
+                          </div>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        {pricesResults.precios.slice(0, 5).map((precio: any, idx: number) => (
+                          <div key={idx} className="p-2 bg-white border border-green-200 rounded text-sm">
+                            <div className="flex justify-between items-start">
+                              <div className="font-semibold text-green-900">{precio.proveedor}</div>
+                              <div className="font-bold text-green-700">{precio.moneda} {precio.precio}</div>
+                            </div>
+                            {precio.disponibilidad && <div className="text-xs text-gray-600 mt-1">{precio.disponibilidad}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Unified Product Identification Card - Progressive Enhancement */}
                   {(quickProductInfo && quickProductInfo.identificado && !internetResults?.producto_confirmado) && (
                     <div className="mt-8 border-t pt-6">
@@ -597,15 +745,6 @@ export default function TextSearchPage() {
                             </div>
                           )}
                         </div>
-
-                        {isLoadingInternet && (
-                          <div className="mt-3 p-3 bg-amber-100 border border-amber-300 rounded-lg">
-                            <div className="flex items-center gap-2 text-sm text-amber-900">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span className="font-medium">Verificando y enriqueciendo con información de internet...</span>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
@@ -628,82 +767,6 @@ export default function TextSearchPage() {
                   {/* Internet Results Section */}
                   {internetResults && !isLoadingInternet && (
                     <div className="mt-8 border-t pt-6">
-                      <div className="mb-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Search className="h-5 w-5 text-blue-600" />
-                          Resultados de Internet
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Información complementaria encontrada en línea
-                        </p>
-                      </div>
-
-                      {/* EFC Ecommerce Search - Improved Experience */}
-                      {(internetResults.resultados_efc?.encontrado_en_efc && internetResults.resultados_efc.productos_efc && internetResults.resultados_efc.productos_efc.length > 0) || quickProductInfo?.nombre_producto && (
-                        <div className="mb-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg shadow-md">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                                <Search className="h-5 w-5 text-white" />
-                              </div>
-                              <div>
-                                <div className="font-bold text-blue-900 text-lg">Buscar en EFC Ecommerce</div>
-                                <div className="text-sm text-blue-700">
-                                  {internetResults.resultados_efc?.encontrado_en_efc
-                                    ? `Posibles coincidencias encontradas (${internetResults.resultados_efc.productos_efc.length})`
-                                    : 'Productos relacionados disponibles'
-                                  }
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Product matches summary */}
-                          {internetResults.resultados_efc?.productos_efc && internetResults.resultados_efc.productos_efc.length > 0 && (
-                            <div className="mb-4 space-y-2">
-                              {internetResults.resultados_efc.productos_efc.slice(0, 3).map((producto: any, idx: number) => (
-                                <div key={idx} className="p-3 bg-white border border-blue-200 rounded-lg">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="font-semibold text-gray-900 text-sm">{producto.nombre}</div>
-                                      {producto.codigo && (
-                                        <div className="text-xs text-gray-600 font-mono mt-1">Código: {producto.codigo}</div>
-                                      )}
-                                    </div>
-                                    {producto.coincidencia && (
-                                      <div className="ml-2 px-2 py-1 bg-blue-100 rounded text-xs font-bold text-blue-700">
-                                        {producto.coincidencia}%
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Search button with query */}
-                          <a
-                            href={`https://empresas.efc.com.pe/search/?q=${encodeURIComponent(
-                              internetResults?.producto_confirmado?.nombre_comercial ||
-                              quickProductInfo?.nombre_producto ||
-                              query
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg"
-                          >
-                            <Search className="h-5 w-5" />
-                            Buscar "{internetResults?.producto_confirmado?.nombre_comercial || quickProductInfo?.nombre_producto || query}" en EFC
-                          </a>
-
-                          {internetResults.resultados_efc?.mensaje && (
-                            <div className="mt-3 text-xs text-blue-700 italic">
-                              💡 {internetResults.resultados_efc.mensaje}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
                       {/* Product Confirmation - Final Verified Info */}
                       {internetResults.producto_confirmado && (
                         <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-lg shadow-md">
@@ -764,101 +827,6 @@ export default function TextSearchPage() {
                                 <span className="text-green-900">{internetResults.producto_confirmado.categoria}</span>
                               </div>
                             )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Providers */}
-                      {internetResults.proveedores && internetResults.proveedores.length > 0 && (
-                        <div className="mb-6">
-                          <h4 className="font-semibold mb-3">Proveedores Encontrados ({internetResults.proveedores.length})</h4>
-                          <div className="space-y-4">
-                            {internetResults.proveedores.map((proveedor: any, idx: number) => (
-                              <div key={idx} className="p-4 border rounded-lg bg-white hover:shadow-md transition-shadow">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <div className="font-semibold text-lg">{proveedor.nombre_empresa}</div>
-                                    <div className="flex gap-2 mt-1">
-                                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                                        {proveedor.pais}
-                                      </span>
-                                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs capitalize">
-                                        {proveedor.tipo}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  {proveedor.relevancia_score && (
-                                    <div className="text-right">
-                                      <div className="text-sm text-muted-foreground">Relevancia</div>
-                                      <div className="text-lg font-bold text-blue-600">{proveedor.relevancia_score}%</div>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Contact Info */}
-                                {proveedor.contacto && (
-                                  <div className="mt-3 p-3 bg-gray-50 rounded space-y-1 text-sm">
-                                    {proveedor.contacto.telefono && (
-                                      <div>
-                                        <span className="font-medium">Teléfono:</span> {proveedor.contacto.telefono}
-                                      </div>
-                                    )}
-                                    {proveedor.contacto.email && (
-                                      <div>
-                                        <span className="font-medium">Email:</span>{' '}
-                                        <a href={`mailto:${proveedor.contacto.email}`} className="text-blue-600 hover:underline">
-                                          {proveedor.contacto.email}
-                                        </a>
-                                      </div>
-                                    )}
-                                    {proveedor.contacto.whatsapp && (
-                                      <div>
-                                        <span className="font-medium">WhatsApp:</span> {proveedor.contacto.whatsapp}
-                                      </div>
-                                    )}
-                                    {proveedor.contacto.direccion && (
-                                      <div>
-                                        <span className="font-medium">Dirección:</span> {proveedor.contacto.direccion}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Price & Availability */}
-                                <div className="mt-3 flex flex-wrap gap-4 text-sm">
-                                  {proveedor.precio_referencial && (
-                                    <div>
-                                      <span className="font-medium">Precio:</span>{' '}
-                                      <span className="text-green-600 font-semibold">{proveedor.precio_referencial}</span>
-                                    </div>
-                                  )}
-                                  {proveedor.disponibilidad && (
-                                    <div>
-                                      <span className="font-medium">Disponibilidad:</span> {proveedor.disponibilidad}
-                                    </div>
-                                  )}
-                                  {proveedor.tiempo_entrega && (
-                                    <div>
-                                      <span className="font-medium">Entrega:</span> {proveedor.tiempo_entrega}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Source URL */}
-                                {proveedor.url_fuente && (
-                                  <div className="mt-3 pt-3 border-t">
-                                    <a
-                                      href={proveedor.url_fuente}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-                                    >
-                                      Ver fuente →
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
                           </div>
                         </div>
                       )}

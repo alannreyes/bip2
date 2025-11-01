@@ -1107,26 +1107,128 @@ export class SearchService {
             }),
           } as MessageEvent);
 
-          // Event 7: Internet search started (enrichment)
+          // Event 7: Starting parallel mini-searches
           subscriber.next({
             data: JSON.stringify({
-              type: 'internet_start',
-              message: 'Enriqueciendo con información de internet...',
+              type: 'parallel_search_start',
+              message: 'Iniciando búsquedas paralelas en internet...',
             }),
           } as MessageEvent);
 
-          // Search on internet (full enrichment)
-          const internetStart = Date.now();
-          const internetResults = await this.geminiService.searchProductOnInternet(query, efcProductsInfo);
-          const internetDuration = Date.now() - internetStart;
+          // PARALLEL MINI-SEARCHES: Launch all 4 searches in parallel
+          // Each search will emit its own event when it completes
+          const searchPromises = [
+            // Mini-search 1: Suppliers in Peru (most important)
+            {
+              name: 'suppliers',
+              promise: this.geminiService.searchSuppliersInPeru(query, efcProductsInfo),
+              message: 'Buscando proveedores en Perú...',
+            },
+            // Mini-search 2: Technical specifications
+            {
+              name: 'specs',
+              promise: this.geminiService.searchTechnicalSpecs(query),
+              message: 'Obteniendo especificaciones técnicas...',
+            },
+            // Mini-search 3: Reference prices
+            {
+              name: 'prices',
+              promise: this.geminiService.searchReferencePrices(query),
+              message: 'Buscando precios referenciales...',
+            },
+            // Mini-search 4: Alternative products
+            {
+              name: 'alternatives',
+              promise: this.geminiService.searchAlternatives(query),
+              message: 'Buscando alternativas similares...',
+            },
+          ];
 
-          // Event 8: Internet search complete (final enrichment)
+          // Emit start events for all mini-searches
+          searchPromises.forEach(search => {
+            subscriber.next({
+              data: JSON.stringify({
+                type: `${search.name}_search_start`,
+                message: search.message,
+              }),
+            } as MessageEvent);
+          });
+
+          // Execute all searches in parallel and emit results as they complete
+          const results = await Promise.allSettled(
+            searchPromises.map(async (search, index) => {
+              const start = Date.now();
+              try {
+                const result = await search.promise;
+                const duration = Date.now() - start;
+
+                // Emit completion event immediately when this search finishes
+                subscriber.next({
+                  data: JSON.stringify({
+                    type: `${search.name}_search_complete`,
+                    message: `${this.getSearchCompletionMessage(search.name, result)}`,
+                    duration: `${duration}ms`,
+                    results: result,
+                    searchIndex: index + 1,
+                    totalSearches: searchPromises.length,
+                  }),
+                } as MessageEvent);
+
+                return { name: search.name, data: result, duration };
+              } catch (error) {
+                const duration = Date.now() - start;
+                this.logger.error(`Mini-search ${search.name} failed: ${error.message}`);
+
+                // Emit error event
+                subscriber.next({
+                  data: JSON.stringify({
+                    type: `${search.name}_search_error`,
+                    message: `Error en búsqueda de ${search.name}`,
+                    duration: `${duration}ms`,
+                    error: error.message,
+                  }),
+                } as MessageEvent);
+
+                return { name: search.name, data: null, duration, error: error.message };
+              }
+            })
+          );
+
+          // Consolidate all results
+          const consolidatedResults = {
+            proveedores: [],
+            especificaciones: {},
+            usos: {},
+            precios: [],
+            rango_precio: {},
+            alternativas: [],
+          };
+
+          results.forEach((result) => {
+            if (result.status === 'fulfilled' && result.value.data) {
+              const { name, data } = result.value;
+
+              if (name === 'suppliers') {
+                consolidatedResults.proveedores = data.proveedores || [];
+              } else if (name === 'specs') {
+                consolidatedResults.especificaciones = data.especificaciones || {};
+                consolidatedResults.usos = data.usos || {};
+              } else if (name === 'prices') {
+                consolidatedResults.precios = data.precios || [];
+                consolidatedResults.rango_precio = data.rango_precio || {};
+              } else if (name === 'alternatives') {
+                consolidatedResults.alternativas = data.alternativas || [];
+              }
+            }
+          });
+
+          // Event: All parallel searches completed
+          const successCount = results.filter(r => r.status === 'fulfilled' && r.value.data).length;
           subscriber.next({
             data: JSON.stringify({
-              type: 'internet_complete',
-              message: 'Información completa lista',
-              duration: `${internetDuration}ms`,
-              results: internetResults,
+              type: 'all_searches_complete',
+              message: `Completadas ${successCount}/${searchPromises.length} búsquedas`,
+              results: consolidatedResults,
             }),
           } as MessageEvent);
 
@@ -1210,6 +1312,40 @@ export class SearchService {
     } catch (error) {
       this.logger.error(`Error getting raw vectorial results: ${error.message}`, error.stack);
       throw error;
+    }
+  }
+
+  /**
+   * Generate completion message for each mini-search based on results
+   */
+  private getSearchCompletionMessage(searchName: string, result: any): string {
+    switch (searchName) {
+      case 'suppliers':
+        const supplierCount = result?.proveedores?.length || 0;
+        return supplierCount > 0
+          ? `Encontrados ${supplierCount} proveedores en Perú`
+          : 'No se encontraron proveedores';
+
+      case 'specs':
+        const hasSpecs = result?.especificaciones && Object.keys(result.especificaciones).length > 0;
+        return hasSpecs
+          ? 'Especificaciones técnicas obtenidas'
+          : 'No se encontraron especificaciones';
+
+      case 'prices':
+        const priceCount = result?.precios?.length || 0;
+        return priceCount > 0
+          ? `Encontrados ${priceCount} precios referenciales`
+          : 'No se encontraron precios';
+
+      case 'alternatives':
+        const altCount = result?.alternativas?.length || 0;
+        return altCount > 0
+          ? `Encontradas ${altCount} alternativas`
+          : 'No se encontraron alternativas';
+
+      default:
+        return 'Búsqueda completada';
     }
   }
 }
