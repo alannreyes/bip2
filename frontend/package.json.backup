@@ -5,9 +5,9 @@
   "author": "EFC",
   "license": "MIT",
   "scripts": {
-    "dev": "next dev -p 3011",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 3011",
+    "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {

@@ -36,6 +36,7 @@ export default function TextSearchPage() {
   const [useLLMFilter, setUseLLMFilter] = useState<boolean>(false); // Default: OFF - trust embeddings
   const [internetResults, setInternetResults] = useState<any>(null);
   const [quickProductInfo, setQuickProductInfo] = useState<any>(null); // Quick identification (shows first)
+  const [clientFilterMessage, setClientFilterMessage] = useState<string>(''); // Client filter UX message
 
   // SSE states
   const [isLoadingInternet, setIsLoadingInternet] = useState(false);
@@ -197,6 +198,7 @@ export default function TextSearchPage() {
     setSearchDuration('');
     setInternetProgress('');
     setInternetError('');
+    setClientFilterMessage(''); // Reset client filter message
     // Reset parallel search results
     setSuppliersResults(null);
     setSpecsResults(null);
@@ -216,6 +218,11 @@ export default function TextSearchPage() {
 
       setSearchResults(response.data.results);
       setSearchDuration(response.data.duration);
+
+      // Show client filter message if present
+      if (response.data.client_filter_message) {
+        setClientFilterMessage(response.data.client_filter_message);
+      }
 
       // Start internet search via SSE (if enabled)
       if (includeInternetSearch) {
@@ -451,6 +458,37 @@ export default function TextSearchPage() {
                     </div>
                   )}
 
+                  {/* Client Filter Message - UX feedback */}
+                  {clientFilterMessage && (
+                    <div className={`mb-4 p-4 rounded-lg border-l-4 ${
+                      clientFilterMessage.includes('No se pudo conectar')
+                        ? 'bg-red-50 border-red-500'
+                        : clientFilterMessage.includes('no ha comprado')
+                        ? 'bg-yellow-50 border-yellow-500'
+                        : 'bg-blue-50 border-blue-500'
+                    }`}>
+                      <div className="flex items-start gap-2">
+                        <div className="text-lg mt-0.5">
+                          {clientFilterMessage.includes('No se pudo conectar')
+                            ? '⚠️'
+                            : clientFilterMessage.includes('no ha comprado')
+                            ? 'ℹ️'
+                            : '✅'}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium mb-1">
+                            {clientFilterMessage.includes('No se pudo conectar')
+                              ? 'Error de Conexión'
+                              : clientFilterMessage.includes('no ha comprado')
+                              ? 'Sin Historial de Compras'
+                              : 'Filtro de Cliente Activo'}
+                          </div>
+                          <div className="text-sm text-gray-700">{clientFilterMessage}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Results List */}
                   {searchResults.length > 0 ? (
                     <div className="space-y-4 max-h-[600px] overflow-y-auto">
@@ -501,16 +539,55 @@ export default function TextSearchPage() {
                           <div className="space-y-1 text-sm">
                             {Object.entries(result.payload)
                               .filter(([key]) => key !== '_original_id')
-                              .map(([key, value]) => (
-                                <div key={key} className="flex">
-                                  <span className="text-muted-foreground min-w-[120px] capitalize">
-                                    {key}:
-                                  </span>
-                                  <span className="font-medium break-all">
-                                    {String(value)}
-                                  </span>
-                                </div>
-                              ))}
+                              .map(([key, value]) => {
+                                // Helper function to safely render any value type
+                                const renderValue = (val: any, depth: number = 0): React.ReactNode => {
+                                  if (val === null || val === undefined) {
+                                    return <span className="text-gray-400 italic">N/A</span>;
+                                  }
+
+                                  if (typeof val === 'boolean') {
+                                    return <span>{val ? 'Sí' : 'No'}</span>;
+                                  }
+
+                                  if (typeof val === 'object' && !Array.isArray(val)) {
+                                    // Nested object - render as sub-properties recursively
+                                    return (
+                                      <div className="ml-4 mt-1 space-y-0.5">
+                                        {Object.entries(val).map(([subKey, subValue]) => (
+                                          <div key={subKey} className="text-xs flex flex-col">
+                                            <span className="text-gray-500">{subKey}:</span>
+                                            <span className="text-gray-700 ml-2">
+                                              {renderValue(subValue, depth + 1)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  }
+
+                                  if (Array.isArray(val)) {
+                                    // Handle array - safely convert each item
+                                    return <span>{val.map(v =>
+                                      typeof v === 'object' ? JSON.stringify(v) : String(v)
+                                    ).join(', ')}</span>;
+                                  }
+
+                                  // Primitive value - safe to render
+                                  return <span>{String(val)}</span>;
+                                };
+
+                                return (
+                                  <div key={key} className="flex flex-col">
+                                    <span className="text-muted-foreground capitalize">
+                                      {key}:
+                                    </span>
+                                    <span className="font-medium break-all ml-2">
+                                      {renderValue(value)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                           </div>
 
                           {/* Client Purchase Info */}

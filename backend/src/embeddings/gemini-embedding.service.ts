@@ -295,27 +295,53 @@ Descripción: ${p.descripcion}${p.marca ? `\nMarca: ${p.marca}` : ''}${p.categor
 Score original: ${p.score.toFixed(3)}`
         ).join('\n\n');
 
-        const prompt = `Evalúa si cada producto coincide con la búsqueda del usuario.
+        const prompt = `Eres un inspector de control de calidad INDUSTRIAL ESTRICTO. Valida si cada producto es EXACTAMENTE lo que el cliente solicita o un equivalente industrial certificado.
 
-BÚSQUEDA DEL USUARIO: "${query}"
+BÚSQUEDA DEL CLIENTE: "${query}"
 
 PRODUCTOS A EVALUAR:
 ${productsText}
 
-Para cada producto, determina:
-1. ¿Es EXACTAMENTE el tipo de producto que el usuario está buscando?
-2. ¿O es un producto DIFERENTE que solo comparte algunas palabras?
-3. IMPORTANTE: Si la búsqueda incluye una MARCA específica, el producto DEBE ser de esa marca exacta
+REGLAS DE VALIDACIÓN INDUSTRIAL (INFLEXIBLES):
 
-CRITERIOS ESTRICTOS:
-- match=true: Solo si el producto ES el tipo correcto que busca el usuario Y la marca coincide (si se especificó)
-- match=false: Si es un producto diferente O si la marca no coincide con la especificada
-- Ejemplos:
-  * Query "papel A4 blanco 80g" + Producto "BORRADOR BLANCO" => match=false (es borrador, no papel)
-  * Query "papel A4 blanco 80g" + Producto "PAPEL BOND A4 BLANCO 80GR" => match=true
-  * Query "plumón negro" + Producto "PIZARRA PARA PLUMÓN" => match=false (es pizarra, no plumón)
-  * Query "archivador oficio negro OVE" + Producto marca "STANDFORD" => match=false (marca diferente)
-  * Query "archivador oficio negro OVE" + Producto marca "OVE" => match=true (marca coincide)
+1. TIPO DE PRODUCTO:
+   - DEBE ser el producto EXACTO solicitado
+   - NO aceptar accesorios, complementos o productos relacionados
+   - Ejemplo: Si pide "desarmador" NO aceptar "kit de desarmadores", "juego", "set"
+
+2. ESPECIFICACIONES TÉCNICAS (CERO TOLERANCIA):
+   - Medidas/Dimensiones: DEBEN ser EXACTAS (6" ≠ 8" ≠ 10")
+   - Voltaje: DEBE ser EXACTO (110V ≠ 220V)
+   - Capacidad: DEBE ser EXACTA (500ml ≠ 1L)
+   - Peso/Masa: DEBE ser EXACTO (1kg ≠ 2kg)
+   - Diámetro/Grosor: DEBE ser EXACTO (1/4" ≠ 3/8" ≠ 1/2")
+
+   EQUIVALENCIAS INDUSTRIALES ACEPTABLES:
+   - Solo si son estándares certificados (ej: "Phillips #2" = "Estrella #2")
+   - Conversiones métricas exactas (ej: 6" = 152mm, 1/4" = 6.35mm)
+   - Nomenclatura industrial equivalente (ej: "Plano" = "Punta plana")
+
+3. MARCA (SI SE ESPECIFICÓ):
+   - DEBE ser la marca EXACTA solicitada
+   - NO aceptar marcas "similares" o "equivalentes"
+   - Stanley ≠ Truper ≠ Urrea ≠ Klein Tools
+
+4. CRITERIO DE RECHAZO AUTOMÁTICO:
+   - Producto de tipo diferente => match=false
+   - Cualquier especificación diferente => match=false
+   - Marca diferente (si se especificó) => match=false
+   - Juegos/Sets/Kits (si se pidió pieza individual) => match=false
+   - Producto complementario o accesorio => match=false
+
+EJEMPLOS DE EVALUACIÓN ESTRICTA:
+  ✅ Query "desarmador plano 1/4 x 6 pulgadas stanley" + Producto "DESARMADOR PLANO 1/4\" X 6\" STANLEY 64-461" => match=true, confidence=1.0 (EXACTO)
+  ✅ Query "desarmador plano 1/4 x 6" + Producto "DESARMADOR PUNTA PLANA 1/4\" X 152MM" => match=true, confidence=0.95 (6"=152mm, equivalente industrial)
+
+  ❌ Query "desarmador plano 1/4 x 6" + Producto "DESARMADOR PLANO 1/4\" X 8\"" => match=false, confidence=0.0 (medida diferente: 8" ≠ 6")
+  ❌ Query "desarmador plano 1/4 x 6 stanley" + Producto "DESARMADOR PLANO 1/4\" X 6\" TRUPER" => match=false, confidence=0.0 (marca diferente)
+  ❌ Query "desarmador plano 1/4 x 6" + Producto "JGO DESARMADORES 6 PZAS" => match=false, confidence=0.0 (es juego, no pieza individual)
+  ❌ Query "cable 10mm" + Producto "CABLE 12MM" => match=false, confidence=0.0 (calibre diferente)
+  ❌ Query "papel A4 80g" + Producto "PAPEL A4 75G" => match=false, confidence=0.0 (gramaje diferente)
 
 Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
 [

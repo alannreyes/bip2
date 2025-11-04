@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
     ports:
-      - "5432:5432"
+      - "5445:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -24,7 +24,7 @@ services:
     image: redis:7-alpine
     container_name: qdrant-catalog-redis
     ports:
-      - "6379:6379"
+      - "6390:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -41,7 +41,7 @@ services:
       dockerfile: Dockerfile
     container_name: qdrant-catalog-backend
     ports:
-      - "3001:3001"
+      - "3002:3001"
     environment:
       NODE_ENV: development
       PORT: 3001
@@ -54,7 +54,7 @@ services:
       REDIS_PORT: 6379
       QDRANT_HOST: 192.168.2.6
       QDRANT_PORT: 6333
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_KEY: AIzaSyByPuyPZ-9s9FeDHE8v5lOH5zMIcLDLZt4
       JWT_SECRET: your-super-secret-jwt-key-change-this
       CORS_ORIGIN: http://localhost:3000
     depends_on:

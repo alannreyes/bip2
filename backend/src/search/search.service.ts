@@ -150,14 +150,37 @@ export class SearchService {
       let finalResults = cliente ? semanticallyFiltered : semanticallyFiltered.slice(0, limit);
 
       // Step 9: Enrich with client purchase data if cliente filter is provided
+      let clientDataStatus = 'not_requested'; // 'not_requested' | 'success' | 'no_data' | 'error'
+      let clientDataError = null;
+
       if (cliente) {
         this.logger.debug(`Enriching results with purchase data for client: ${cliente}`);
-        finalResults = await this.enrichWithClientData(finalResults, cliente, collectionName);
 
-        // Step 10: Filter to show ONLY products sold to this client
-        const beforeFilterCount = finalResults.length;
-        finalResults = finalResults.filter(r => r._vendido_a_cliente === true);
-        this.logger.log(`Filtered from ${beforeFilterCount} to ${finalResults.length} products sold to client ${cliente}`);
+        try {
+          const enrichedResults = await this.enrichWithClientData(finalResults, cliente, collectionName);
+
+          // Check if enrichment was successful (at least one product has client data)
+          const hasClientData = enrichedResults.some(r => r._vendido_a_cliente === true);
+
+          if (hasClientData) {
+            // Step 10: Filter to show ONLY products sold to this client
+            const beforeFilterCount = enrichedResults.length;
+            finalResults = enrichedResults.filter(r => r._vendido_a_cliente === true);
+            this.logger.log(`Filtered from ${beforeFilterCount} to ${finalResults.length} products sold to client ${cliente}`);
+            clientDataStatus = 'success';
+          } else {
+            // No products sold to this client - keep all results but mark status
+            this.logger.warn(`Client ${cliente} has not purchased any of these products. Showing all results.`);
+            finalResults = enrichedResults; // Keep all results with client data flags
+            clientDataStatus = 'no_data';
+          }
+        } catch (error) {
+          // Error accessing client database - keep all results but mark status
+          this.logger.error(`Failed to fetch client data for ${cliente}: ${error.message}`);
+          clientDataError = error.message;
+          clientDataStatus = 'error';
+          // Keep original results without client enrichment
+        }
 
         // Step 11: Trim to requested limit after filtering
         finalResults = finalResults.slice(0, limit);
@@ -174,13 +197,24 @@ export class SearchService {
         cliente,
         duration: `${duration}ms`,
         ...(cliente && {
-          total_found_for_client: finalResults.length,
+          total_found_for_client: finalResults.filter(r => r._vendido_a_cliente).length,
+          client_data_status: clientDataStatus,
+          ...(clientDataError && { client_data_error: clientDataError }),
+          // UX message for frontend
+          client_filter_message:
+            clientDataStatus === 'error'
+              ? `No se pudo conectar a la base de datos de ventas. Mostrando todos los resultados.`
+              : clientDataStatus === 'no_data'
+              ? `El cliente ${cliente} no ha comprado ninguno de estos productos. Mostrando todos los resultados.`
+              : `Mostrando ${finalResults.filter(r => r._vendido_a_cliente).length} productos vendidos al cliente ${cliente}.`,
         }),
         results: finalResults.map((result) => ({
           id: result.id,
           score: result.score,
           payload: result.payload,
-          ...(cliente && {
+          // ONLY include cliente_info if we successfully fetched client data
+          // If there was an error connecting to DB, don't show misleading "Not sold" info
+          ...(cliente && clientDataStatus !== 'error' && {
             cliente_info: {
               vendido_a_cliente: result._vendido_a_cliente || false,
               cantidad_ventas_cliente: result._cantidad_ventas_cliente || 0,
@@ -198,95 +232,20 @@ export class SearchService {
 
   /**
    * Build Qdrant filter from extracted keywords for hybrid search
+   * IMPORTANT: NO hardcoded filters - trust vector search completely
+   * Let Gemini embeddings capture semantic similarity (desarmador ≈ destornillador, etc.)
+   * Use re-ranking to boost/penalize based on keywords
    */
   private buildQdrantFilter(keywords: { brands: string[], dimensions: string[], colors: string[], presentations: string[], models: string[], materials: string[], productCore: string[], regular: string[] }): any {
-    const mustConditions: any[] = [];
-    const shouldConditions: any[] = [];
-
-    // HIGHEST PRIORITY: Product Core filter (SHOULD with very high weight in re-ranking)
-    // Changed from MUST to SHOULD to handle plurals, synonyms, and variations
-    // The re-ranking will heavily penalize products without product core match
-    if (keywords.productCore.length > 0) {
-      keywords.productCore.forEach(core => {
-        shouldConditions.push({
-          key: 'descripcion',
-          match: { text: core }
-        });
-      });
-    }
-
-    // Brand filter - INTELLIGENT: Only use MUST if we have high confidence query
-    // If product core is detected, use MUST for brand (focused search)
-    // If no product core, use SHOULD for brand (exploratory search)
-    if (keywords.brands.length > 0) {
-      const useMustForBrand = keywords.productCore.length > 0; // Only strict if we know what they want
-
-      if (useMustForBrand) {
-        // High confidence query - strict brand matching
-        if (keywords.brands.length === 1) {
-          mustConditions.push({
-            key: 'marca',
-            match: { value: keywords.brands[0].toUpperCase() }
-          });
-        } else {
-          mustConditions.push({
-            should: keywords.brands.map(brand => ({
-              key: 'marca',
-              match: { value: brand.toUpperCase() }
-            }))
-          });
-        }
-      } else {
-        // Exploratory query - flexible brand matching
-        keywords.brands.forEach(brand => {
-          shouldConditions.push({
-            key: 'marca',
-            match: { value: brand.toUpperCase() }
-          });
-        });
-      }
-    }
-
-    // Dimension filters (SHOULD match - helps narrow down but not required)
-    keywords.dimensions.forEach(dimension => {
-      shouldConditions.push({
-        key: 'descripcion',
-        match: { text: dimension }
-      });
-    });
-
-    // Regular keyword filters (SHOULD match - helps with relevance)
-    // Only use the most important ones to avoid over-filtering
-    keywords.regular.slice(0, 3).forEach(keyword => {
-      shouldConditions.push({
-        key: 'descripcion',
-        match: { text: keyword }
-      });
-    });
-
-    // Build final filter
-    const filter: any = {};
-
-    if (mustConditions.length > 0) {
-      filter.must = mustConditions;
-    }
-
-    // IMPORTANT: Only use SHOULD conditions if we have MUST conditions
-    // If we only have SHOULD conditions, Qdrant requires at least one match,
-    // which can block results. Instead, let vector search find similar products
-    // and rely on re-ranking to boost/penalize appropriately.
-    if (shouldConditions.length > 0 && mustConditions.length > 0) {
-      filter.should = shouldConditions;
-    }
-
-    // Return null if no filters (search without filters)
-    if (Object.keys(filter).length === 0) {
-      this.logger.debug('No MUST conditions - skipping filters, relying on vector search + re-ranking');
-      return null;
-    }
-
-    this.logger.debug(`Built Qdrant filter: ${JSON.stringify(filter, null, 2)}`);
-    return filter;
+    // NO FILTERS - trust vector search 100%
+    // Gemini embeddings are powerful enough to understand:
+    // - Synonyms: desarmador ≈ destornillador
+    // - Variations: 6" ≈ 6 pulgadas ≈ 15cm
+    // - Brands: stanley ≈ STANLEY
+    //
+    // Re-ranking will boost exact matches later
+    this.logger.debug('NO filters applied - trusting vector search + re-ranking completely');
+    return null;
   }
 
   /**
@@ -303,12 +262,9 @@ export class SearchService {
     productCore: string[];  // NEW: Essential product type (desarmador, cincel, etc.)
     regular: string[];
   } {
-    // Known brands (add more as needed)
-    const knownBrands = new Set([
-      'stanley', 'truper', 'uyustools', 'urrea', 'rubicon', 'pretul',
-      'dewalt', 'makita', 'bosch', 'black+decker', 'milwaukee', 'ryobi',
-      'cpp', 'anypsa', 'sherwin williams', 'comex', 'pintuco', 'teknoquimica'
-    ]);
+    // NO hardcoded brands - we'll detect them dynamically during re-ranking
+    // This is more flexible for a central de compras where brands are added daily
+    const knownBrands = new Set<string>();
 
     // Known colors
     const knownColors = new Set([
@@ -391,10 +347,21 @@ export class SearchService {
       .filter(m => m.length >= 3); // At least 3 characters
 
     // Convert to lowercase and extract words
+    // Keep words with 3+ characters OR 2-character alphanumeric words (brands like 3M, GE, HP)
     const words = text.toLowerCase()
       .replace(/[^\w\s/"-]/g, ' ')  // Keep / " - for dimensions
       .split(/\s+/)
-      .filter(word => word.length > 2);
+      .filter(word => {
+        if (word.length > 2) return true;
+        // Keep 2-char words if they contain at least one letter and one number (e.g., "3m", "5s")
+        // OR if they are all letters (e.g., "ge", "hp", "lg")
+        if (word.length === 2) {
+          const hasLetter = /[a-z]/i.test(word);
+          const hasNumber = /\d/.test(word);
+          return hasLetter; // Keep if it has at least one letter
+        }
+        return false; // Filter out 1-char words and 0-char words
+      });
 
     // Remove common stop words
     const stopWords = new Set([
@@ -450,6 +417,10 @@ export class SearchService {
    * Build attention-based query structure
    * Reorders query components to give prominence to critical attributes
    * This implements a lightweight attention mechanism inspired by "Attention Is All You Need"
+   *
+   * IMPORTANT: Brands are NOW EXCLUDED from embedding generation!
+   * Brands are only used for re-ranking, not for vector search.
+   * This ensures we find ALL relevant products regardless of brand.
    */
   private buildAttentionQuery(
     originalQuery: string,
@@ -471,10 +442,9 @@ export class SearchService {
       parts.push(`Producto: ${keywords.productCore.join(', ')}`);
     }
 
-    // Priority 1: Brand (high attention weight)
-    if (keywords.brands.length > 0) {
-      parts.push(`Marca: ${keywords.brands.join(', ')}`);
-    }
+    // Priority 1: Brand - REMOVED! Brands are now only used for re-ranking, not for embedding
+    // This prevents excluding products from other brands in vector search
+    // Example: searching "lentes 3m" will now find TRUPER lenses too, then boost 3M in re-ranking
 
     // Priority 2: Model/Part Number
     if (keywords.models.length > 0) {
@@ -502,14 +472,37 @@ export class SearchService {
     }
 
     // Priority 7: General description (lower attention but provides context)
-    if (keywords.regular.length > 0) {
-      parts.push(`Descripción: ${keywords.regular.join(' ')}`);
+    // Filter out brand-like words from regular keywords to avoid them influencing the embedding
+    const regularFiltered = keywords.regular.filter(word => {
+      // Remove any word that appears in brands (from marca parameter)
+      if (keywords.brands.some(brand => word.includes(brand.toLowerCase()) || brand.toLowerCase().includes(word))) {
+        return false;
+      }
+
+      // Remove 2-3 character words that look like brand names (alphanumeric: 3m, ge, hp, lg, etc.)
+      // These should only be used for re-ranking, not for vector search
+      if (word.length >= 2 && word.length <= 3) {
+        const hasLetter = /[a-z]/i.test(word);
+        const hasNumber = /\d/.test(word);
+        // If it has both letters and numbers, it's likely a brand (3m, 5s, etc.)
+        // OR if it's all uppercase letters (GE, HP, LG) - but we're in lowercase, so check all letters
+        if ((hasLetter && hasNumber) || (hasLetter && word.length === 2)) {
+          this.logger.debug(`Excluding brand-like word from embedding: "${word}"`);
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    if (regularFiltered.length > 0) {
+      parts.push(`Descripción: ${regularFiltered.join(' ')}`);
     }
 
     // If we extracted structured attributes, use them; otherwise fall back to original
     if (parts.length > 0) {
       const structuredQuery = parts.join(' | ');
-      this.logger.debug(`Attention query: ${structuredQuery}`);
+      this.logger.debug(`Attention query (brands excluded): ${structuredQuery}`);
       return structuredQuery;
     }
 
@@ -551,12 +544,25 @@ export class SearchService {
         }
       });
 
-      // Check brand matches
-      keywords.brands.forEach(brand => {
-        if (brandField.includes(brand)) {
+      // DYNAMIC BRAND DETECTION - but ONLY use for soft boosting, not filtering
+      // When marca filter is explicitly provided (marca parameter), apply strong boost/penalty
+      // When marca is just mentioned in query text, DON'T apply brand filtering at all
+      // This prevents excluding valid results when user searches "lentes 3m" but TRUPER lenses also match
+      const queryWords = keywords.regular.concat(keywords.brands);
+      queryWords.forEach(word => {
+        // Check if this word appears in the brand field (flexible matching)
+        if (brandField && brandField.includes(word.toLowerCase())) {
           brandMatches++;
-        } else if (keywords.brands.length > 0) {
-          // If user specified a brand but this product doesn't match, penalize
+        }
+      });
+
+      // ONLY penalize brand mismatches if marca filter was explicitly provided via parameter
+      // (marca parameter will be in keywords.brands after line 38 adds it)
+      // If marca is just in the query text, DON'T penalize other brands
+      // This is handled by checking if keywords.brands is non-empty
+      keywords.brands.forEach(brand => {
+        if (brandField && !brandField.includes(brand)) {
+          // If user explicitly specified a brand filter but this product doesn't match, penalize
           brandMismatches++;
         }
       });
@@ -637,7 +643,7 @@ export class SearchService {
 
       // Calculate total boost
       // Product Core matching is ABSOLUTE PRIORITY - massive boost/penalty
-      // Keyword matching weights: productCore (0.30 HUGE!), brand (0.05), dimension (0.08), regular (0.02)
+      // Keyword matching weights: productCore (0.30 HUGE!), brand (0.25 CRITICAL!), dimension (0.08), regular (0.02)
       // Commercial weights: stock (0.04), price list (0.02), sales (0.03 max), recency (0.02 max)
       let boost = 1.0;
 
@@ -651,8 +657,10 @@ export class SearchService {
         }
       }
 
-      boost += brandMatches * 0.05;        // +5% per brand match
-      boost -= brandMismatches * 0.05;     // -5% per brand mismatch
+      // CRITICAL: Brand match - when user specifies a brand, it's very important
+      // Increased from +5% to +25% to ensure branded products rank higher
+      boost += brandMatches * 0.25;        // +25% per brand match (CRITICAL for central de compras!)
+      boost -= brandMismatches * 0.15;     // -15% per brand mismatch
       boost += dimensionMatches * 0.08;    // +8% per dimension match
       boost += regularMatches * 0.02;      // +2% per regular keyword match
       boost += stockBoost;                 // +4% if in stock
