@@ -137,9 +137,11 @@ HARDCODED_KEYS=0
 # Check all docker-compose files for potential hardcoded API keys
 for file in docker-compose*.yml PORTAINER_DOCKER_COMPOSE.yml; do
     if [ -f "$file" ]; then
-        # Look for patterns that might indicate hardcoded API keys (excluding placeholders)
-        if grep -E "GEMINI_API_KEY.*AIza" "$file" > /dev/null 2>&1; then
-            print_warning "Potential hardcoded GEMINI_API_KEY found in $file"
+        # Look for patterns that might indicate hardcoded API keys
+        # Gemini API keys start with AIza
+        # Also check for other common patterns
+        if grep -E "GEMINI_API_KEY.*AIza|API_KEY.*['\"][A-Za-z0-9_-]{20,}['\"]|SECRET.*['\"][^$][A-Za-z0-9_-]{20,}['\"]" "$file" > /dev/null 2>&1; then
+            print_warning "Potential hardcoded API key or secret found in $file"
             HARDCODED_KEYS=$((HARDCODED_KEYS + 1))
         fi
     fi
@@ -154,7 +156,22 @@ fi
 
 # Check port conflicts
 print_info "Checking for port availability..."
-PORTS=(3001 3011 5433 6333 6334 6380 3307)
+# Extract ports dynamically from docker-compose files
+PORTS=()
+for file in PORTAINER_DOCKER_COMPOSE.yml docker-compose-portainer.yml; do
+    if [ -f "$file" ]; then
+        # Extract published ports from docker-compose files
+        EXTRACTED_PORTS=$(grep -E '^\s+- "[0-9]+:[0-9]+"' "$file" 2>/dev/null | sed -E 's/.*"([0-9]+):[0-9]+".*/\1/' | sort -u)
+        for port in $EXTRACTED_PORTS; do
+            PORTS+=($port)
+        done
+    fi
+done
+
+# Remove duplicates
+PORTS=($(echo "${PORTS[@]}" | tr ' ' '\n' | sort -u))
+
+# Check each port
 for port in "${PORTS[@]}"; do
     if lsof -i:$port > /dev/null 2>&1; then
         print_warning "Port $port is already in use"

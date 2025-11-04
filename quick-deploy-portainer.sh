@@ -46,8 +46,22 @@ read -r JWT_SECRET
 
 if [ -z "$JWT_SECRET" ]; then
     print_info "Generating a secure JWT secret..."
-    JWT_SECRET=$(openssl rand -base64 32 2>/dev/null || echo "PLEASE_CHANGE_THIS_$(date +%s)")
-    echo "Generated JWT Secret: $JWT_SECRET"
+    # Try multiple methods for secure random generation
+    if command -v openssl &> /dev/null; then
+        JWT_SECRET=$(openssl rand -base64 32)
+        echo "Generated JWT Secret using openssl"
+    elif [ -f /dev/urandom ]; then
+        JWT_SECRET=$(head -c 32 /dev/urandom | base64)
+        echo "Generated JWT Secret using /dev/urandom"
+    else
+        print_warning "Cannot generate secure JWT secret automatically."
+        print_warning "Please enter a secure JWT secret manually (minimum 32 characters):"
+        read -r JWT_SECRET
+        if [ -z "$JWT_SECRET" ]; then
+            echo "Error: JWT_SECRET is required for deployment."
+            exit 1
+        fi
+    fi
 fi
 
 # Create a temporary .env file for reference
