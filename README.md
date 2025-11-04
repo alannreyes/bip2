@@ -8,6 +8,13 @@ Sistema de gestión de catálogos vectoriales multi-fuente con búsqueda semánt
 
 **¿Vas a desplegar este sistema en producción?** Sigue estos documentos en orden:
 
+### 🐳 Despliegue con Portainer (Recomendado)
+- **[PORTAINER_COMPLETE_GUIDE.md](./PORTAINER_COMPLETE_GUIDE.md)** - 📘 Guía completa paso a paso para Ubuntu + Portainer
+- **Scripts de ayuda:**
+  - `./validate-deployment.sh` - Validar configuración antes de desplegar
+  - `./quick-deploy-portainer.sh` - Asistente interactivo de deployment
+
+### 📚 Guías Generales de Deployment
 1. **[DEVOPS_CHECKLIST.md](./DEVOPS_CHECKLIST.md)** - Checklist completo paso a paso
 2. **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Guía detallada de deployment
 3. **[ENV_PRODUCTION_GUIDE.md](./ENV_PRODUCTION_GUIDE.md)** - Cómo configurar .env.production
