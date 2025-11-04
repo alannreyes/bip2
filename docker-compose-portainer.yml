@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -52,7 +50,6 @@ services:
       MYSQL_PASSWORD: efc123
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./backend/init-mysql.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
       interval: 10s
@@ -113,20 +110,20 @@ services:
       QDRANT_PORT: 6333
       QDRANT_API_KEY: ""
       
-      # Gemini API - REEMPLAZAR CON TU CLAVE REAL
+      # Gemini API - MUST BE SET VIA PORTAINER ENVIRONMENT VARIABLES
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       
       # CORS
       CORS_ORIGIN: http://localhost:3011,http://frontend:3000
       
-      # JWT - REEMPLAZAR CON VALOR SEGURO
+      # JWT - MUST BE SET VIA PORTAINER ENVIRONMENT VARIABLES
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
       JWT_EXPIRES_IN: 7d
       
       # Azure AD (Opcional)
-      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
-      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
-      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET:-}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-}
       AZURE_AD_REDIRECT_URI: http://localhost:3001/api/auth/callback
     depends_on:
       postgres:
