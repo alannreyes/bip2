@@ -1,5 +1,5 @@
 version: '3.8'
- 
+
 services:
   # PostgreSQL Database
   postgres:
@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
     networks:
       - traefik-net
- 
+
   # Redis Cache
   redis:
     image: redis:7-alpine
@@ -44,7 +44,7 @@ services:
     restart: unless-stopped
     networks:
       - traefik-net
- 
+
   # Qdrant Vector Database
   qdrant:
     image: qdrant/qdrant:latest
@@ -65,7 +65,7 @@ services:
     restart: unless-stopped
     networks:
       - traefik-net
- 
+
   # NestJS Backend
   backend:
     build:
@@ -78,27 +78,34 @@ services:
       NODE_ENV: production
       PORT: 3001
       APP_URL: http://backend:3001
+      
       # Database PostgreSQL
       DATABASE_HOST: ${DATABASE_HOST:-postgres}
       DATABASE_PORT: 5432
       DATABASE_USERNAME: ${DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres123}
       DATABASE_NAME: ${DATABASE_NAME:-qdrant_sync}
+      
       # Redis
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      
       # Qdrant
       QDRANT_HOST: ${QDRANT_HOST:-qdrant}
       QDRANT_PORT: ${QDRANT_PORT:-6333}
       QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      
       # Gemini API
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      
       # CORS
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3011,http://frontend:3000}
+      
       # JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 7d
+      
       # Azure AD - NO CONFIGURADO
       AZURE_AD_CLIENT_ID: ""
       AZURE_AD_CLIENT_SECRET: ""
@@ -120,7 +127,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
- 
+
   # Next.js Frontend
   frontend:
     build:
@@ -145,7 +152,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
- 
+
 volumes:
   postgres_data:
     driver: local
@@ -153,7 +160,7 @@ volumes:
     driver: local
   qdrant_data:
     driver: local
- 
+
 networks:
   traefik-net:
     external: true
