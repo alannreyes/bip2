@@ -16,13 +16,11 @@ ENV NODE_ENV=development
 RUN npm install --legacy-peer-deps
 ENV NODE_ENV=production
 
-# Verify @nestjs/cli is installed
-RUN echo "Checking for @nestjs/cli..." && \
-    (npm list @nestjs/cli || npm install --save-dev @nestjs/cli@latest) && \
-    echo "Nest CLI check completed"
-
-# List installed packages for debugging
-RUN echo "Installed packages:" && npm list --depth=0 2>/dev/null || true
+# Verify nest CLI binary exists (non-blocking check)
+RUN echo "Verifying nest CLI..." && \
+    (test -f node_modules/.bin/nest && echo "Nest CLI found in node_modules/.bin/nest") || \
+    (test -f node_modules/@nestjs/cli/bin/nest.js && echo "Nest CLI found in @nestjs/cli package") || \
+    (echo "Nest CLI not found in expected locations, will try npm run build anyway")
 
 # Copy source code
 COPY . .
