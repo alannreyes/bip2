@@ -1,0 +1,50 @@
+[1mdiff --git a/backend/Dockerfile b/backend/Dockerfile[m
+[1mindex 4bb0215..44658db 100644[m
+[1m--- a/backend/Dockerfile[m
+[1m+++ b/backend/Dockerfile[m
+[36m@@ -2,6 +2,9 @@[m [mFROM node:20-alpine[m
+ [m
+ WORKDIR /app[m
+ [m
+[32m+[m[32m# Install build dependencies (needed for some native modules)[m
+[32m+[m[32mRUN apk add --no-cache python3 make g++[m
+[32m+[m
+ # Verify node and npm are available[m
+ RUN node --version && npm --version[m
+ [m
+[36m@@ -11,21 +14,30 @@[m [mCOPY nest-cli.json ./[m
+ COPY tsconfig.json ./[m
+ [m
+ # Install ALL dependencies (devDependencies needed for build)[m
+[31m-# Using npm install instead of npm ci for better compatibility[m
+[31m-RUN npm install[m
+[32m+[m[32mRUN npm install --legacy-peer-deps[m
+ [m
+[31m-# Verify nest CLI is installed[m
+[32m+[m[32m# Verify nest CLI is installed and available[m
+ RUN ls -la node_modules/.bin/ | grep nest || echo "nest CLI not found in node_modules/.bin"[m
+[32m+[m[32mRUN test -f node_modules/.bin/nest || (echo "ERROR: nest CLI not found" && exit 1)[m
+ [m
+ # Copy source code[m
+ COPY . .[m
+ [m
+[31m-# Build the application - use direct path to nest CLI[m
+[31m-RUN ./node_modules/.bin/nest build[m
+[32m+[m[32m# Build the application - try multiple methods for compatibility[m
+[32m+[m[32mRUN npm run build || \[m
+[32m+[m[32m    ./node_modules/.bin/nest build || \[m
+[32m+[m[32m    npx nest build || \[m
+[32m+[m[32m    (echo "ERROR: All build methods failed" && exit 1)[m
+[32m+[m
+[32m+[m[32m# Verify build output exists[m
+[32m+[m[32mRUN test -d dist && test -f dist/main.js || (echo "ERROR: Build output not found" && exit 1)[m
+ [m
+ # Remove devDependencies to reduce image size[m
+ RUN npm prune --production && npm cache clean --force[m
+ [m
+[32m+[m[32m# Remove build dependencies[m
+[32m+[m[32mRUN apk del python3 make g++[m
+[32m+[m
+ # Expose port[m
+ EXPOSE 3001[m
+ [m
