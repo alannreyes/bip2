@@ -3,16 +3,20 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
-# Copiar solo los archivos necesarios para instalar dependencias
-COPY package*.json ./
-COPY nest-cli.json ./
-COPY tsconfig.json ./
+# Instalar herramientas necesarias globalmente
+RUN npm install -g @nestjs/cli typescript
 
-# Instalar todas las dependencias (incluyendo devDependencies)
+# Copiar package.json y package-lock.json
+COPY package*.json ./
+
+# Instalar dependencias incluyendo devDependencies
 RUN npm install
 
-# Copiar el resto del código fuente
-COPY . .
+# Copiar archivos de configuración
+COPY nest-cli.json tsconfig.json ./
+
+# Copiar el código fuente
+COPY src/ ./src/
 
 # Construir la aplicación
 RUN npm run build
@@ -25,14 +29,14 @@ WORKDIR /app
 # Copiar package.json y package-lock.json
 COPY package*.json ./
 
-# Instalar solo las dependencias de producción
-RUN npm ci --omit=dev
+# Instalar solo dependencias de producción
+RUN npm ci --only=prod
 
-# Copiar la aplicación construida desde el stage anterior
+# Copiar la aplicación compilada
 COPY --from=builder /app/dist ./dist
 
 # Exponer el puerto
 EXPOSE 3001
 
-# Iniciar la aplicación
+# Comando de inicio
 CMD ["node", "dist/main.js"]
