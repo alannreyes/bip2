@@ -1,30 +1,44 @@
-FROM node:20-alpine
-
-# Verify image base is correct
-RUN which node && which npm && node --version && npm --version
+# Stage 1: Builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
+
+# Install build tools
+RUN apk add --no-cache python3 make g++ curl
 
 # Copy package files
 COPY package*.json ./
 COPY nest-cli.json ./
 COPY tsconfig.json ./
 
-# Install dependencies using full path to npm
-RUN /usr/local/bin/npm ci || /usr/local/bin/npm install --legacy-peer-deps
+# Clean npm cache and install dependencies
+RUN npm cache clean --force && npm install
 
 # Copy source code
 COPY . .
 
-# Build using full path
-RUN /usr/local/bin/npm run build
+# Build application
+RUN npm run build
 
-# Verify build output
-RUN ls -la dist/ && test -f dist/main.js
+# Stage 2: Production
+FROM node:20-alpine
 
-# Remove dev dependencies
-RUN /usr/local/bin/npm prune --production
+WORKDIR /app
 
+# Install curl for healthchecks
+RUN apk add --no-cache curl
+
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only-production
+
+# Copy built application from builder
+COPY --from=builder /app/dist ./dist
+
+# Expose port
 EXPOSE 3001
 
+# Start application
 CMD ["node", "dist/main.js"]
