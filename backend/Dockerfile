@@ -3,19 +3,16 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
-# Instalar herramientas necesarias globalmente
-RUN npm install -g @nestjs/cli typescript
-
 # Copiar package.json y package-lock.json
 COPY package*.json ./
 
-# Instalar dependencias incluyendo devDependencies
+# Instalar todas las dependencias (incluyendo devDependencies)
 RUN npm install
 
 # Copiar todo el contenido del proyecto
 COPY . .
 
-# Construir la aplicación
+# Intentar la construcción sin instalación global
 RUN npm run build
 
 # Stage 2: Production
