@@ -14,8 +14,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application using npx to ensure nest CLI is available
+RUN npx nest build || npm run build
 
 # Remove devDependencies to reduce image size
 RUN npm ci --only=production && npm cache clean --force
