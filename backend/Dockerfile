@@ -2,16 +2,13 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install build dependencies (some npm packages need these)
-# Update package index first, then install
-RUN apk update && apk add --no-cache python3 make g++
-
 # Copy package files first (for better layer caching)
 COPY package*.json ./
 COPY nest-cli.json ./
 COPY tsconfig.json ./
 
 # Install ALL dependencies (devDependencies needed for build)
+# Using npm ci for deterministic installs
 RUN npm ci
 
 # Copy source code
