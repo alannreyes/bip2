@@ -3,42 +3,44 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Requisito común para Next/SWC en Alpine
+RUN apk add --no-cache libc6-compat
+
+# Copia package files e instala dependencias (incluye dev para build)
 COPY package*.json ./
+RUN npm ci || npm install
 
-# Install dependencies
-RUN npm ci
-
-# Copy source code
+# Copia el resto del código
 COPY . .
 
-# Build the application
+# Build (se asume output: 'standalone' en next.config)
 RUN npm run build
 
-# Production image
+# Production image (standalone)
 FROM node:20-alpine AS runner
 
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Compatibilidad para Next/SWC en Alpine
+RUN apk add --no-cache libc6-compat
 
-# Copy built application from builder
+# Usuario no root
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
+
+# Copiar artefactos necesarios desde el builder
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Change ownership to nextjs user
+# Permisos
 RUN chown -R nextjs:nodejs /app
-
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
