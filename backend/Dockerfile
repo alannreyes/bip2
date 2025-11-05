@@ -1,11 +1,7 @@
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+FROM node:20 AS builder
 
 WORKDIR /app
-
-# Update package index and install build tools
-RUN apk --no-cache update && \
-    apk --no-cache add python3 make g++ curl
 
 # Copy package files
 COPY package*.json ./
@@ -25,10 +21,6 @@ RUN npm run build
 FROM node:20-alpine
 
 WORKDIR /app
-
-# Update package index and install curl for healthchecks
-RUN apk --no-cache update && \
-    apk --no-cache add curl
 
 # Copy package files
 COPY package*.json ./
