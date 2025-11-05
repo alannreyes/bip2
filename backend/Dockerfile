@@ -3,18 +3,18 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copiar solo los archivos necesarios para instalar dependencias
 COPY package*.json ./
 COPY nest-cli.json ./
 COPY tsconfig.json ./
 
-# Clean npm cache and install dependencies
-RUN npm cache clean --force && npm install
+# Instalar todas las dependencias (incluyendo devDependencies)
+RUN npm install
 
-# Copy source code
+# Copiar el resto del código fuente
 COPY . .
 
-# Build application
+# Construir la aplicación
 RUN npm run build
 
 # Stage 2: Production
@@ -22,17 +22,17 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copiar package.json y package-lock.json
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm ci --only-production
+# Instalar solo las dependencias de producción
+RUN npm ci --omit=dev
 
-# Copy built application from builder
+# Copiar la aplicación construida desde el stage anterior
 COPY --from=builder /app/dist ./dist
 
-# Expose port
+# Exponer el puerto
 EXPOSE 3001
 
-# Start application
+# Iniciar la aplicación
 CMD ["node", "dist/main.js"]
