@@ -3,47 +3,35 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Ensure NODE_ENV is not production to install devDependencies
+# Asegura dependencias de desarrollo para compilar
 ENV NODE_ENV=development
 
-# Copy package files first (individual files work better with remote context)
-COPY backend/package*.json ./
-COPY backend/nest-cli.json ./
-COPY backend/tsconfig.json ./
+# Copiar package files primero para cache
+COPY package*.json ./
 
-# Install all dependencies (including devDependencies for build)
-RUN npm install --legacy-peer-deps
+# Instalar dependencias (usa ci si hay lockfile; fallback a install con legacy peer deps)
+RUN npm ci || npm install --legacy-peer-deps
 
-# Verify npm and node are available
+# Copiar el resto del código
+COPY . .
+
+# Verificaciones mínimas y build
 RUN node --version && npm --version
+RUN npm run build || (echo "Build failed" && exit 1)
 
-# Verify nest CLI is installed
-RUN test -f node_modules/.bin/nest || (echo "ERROR: nest CLI not found after npm install" && npm list @nestjs/cli && exit 1)
-
-# Copy source code directory
-COPY backend/src ./src
-
-# Build application - use explicit path to nest CLI
-RUN node_modules/.bin/nest build || npm run build || (echo "Build failed" && exit 1)
-
-# Stage 2: Production
-FROM node:20-alpine
+# Stage 2: Runtime
+FROM node:20-alpine AS runner
 
 WORKDIR /app
+ENV NODE_ENV=production
 
-# Copy package files from backend directory (context is repo root)
-COPY backend/package*.json ./
-COPY backend/nest-cli.json ./
-COPY backend/tsconfig.json ./
+# Solo dependencias de producción
+COPY package*.json ./
+RUN npm ci --omit=dev || npm install --only=production --legacy-peer-deps
 
-# Install only production dependencies
-RUN npm ci --only-production || npm install --only=production --legacy-peer-deps
-
-# Copy built application from builder
+# Copiar la app compilada
 COPY --from=builder /app/dist ./dist
 
-# Expose port
 EXPOSE 3001
 
-# Start application
 CMD ["node", "dist/main.js"]
