@@ -1,77 +1,159 @@
 version: '3.8'
-
+ 
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: qdrant-catalog-postgres
+    container_name: bip2-qa-postgres
     environment:
-      POSTGRES_DB: qdrant_catalog_sync
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres123}
+      POSTGRES_DB: ${DATABASE_NAME:-qdrant_sync}
     ports:
-      - "5445:5432"
+      - "${DATABASE_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - qdrant-catalog-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
-
+    restart: unless-stopped
+    networks:
+      - traefik-net
+ 
+  # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: qdrant-catalog-redis
+    container_name: bip2-qa-redis
     ports:
-      - "6390:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - qdrant-catalog-network
+    command: >
+      sh -c "if [ -n \"$${REDIS_PASSWORD}\" ]; then 
+        redis-server --requirepass $${REDIS_PASSWORD}; 
+      else 
+        redis-server; 
+      fi"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-
+    restart: unless-stopped
+    networks:
+      - traefik-net
+ 
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: bip2-qa-qdrant
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: "6334"
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - traefik-net
+ 
+  # NestJS Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: qdrant-catalog-backend
+    container_name: bip2-qa-backend
     ports:
-      - "3002:3001"
+      - "3001:3001"
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: 3001
-      DATABASE_HOST: postgres
+      APP_URL: http://backend:3001
+      # Database PostgreSQL
+      DATABASE_HOST: ${DATABASE_HOST:-postgres}
       DATABASE_PORT: 5432
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres123
-      DATABASE_NAME: qdrant_catalog_sync
-      REDIS_HOST: redis
+      DATABASE_USERNAME: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres123}
+      DATABASE_NAME: ${DATABASE_NAME:-qdrant_sync}
+      # Redis
+      REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: 6379
-      QDRANT_HOST: 192.168.2.6
-      QDRANT_PORT: 6333
-      GEMINI_API_KEY: AIzaSyByPuyPZ-9s9FeDHE8v5lOH5zMIcLDLZt4
-      JWT_SECRET: your-super-secret-jwt-key-change-this
-      CORS_ORIGIN: http://localhost:3000
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # Qdrant
+      QDRANT_HOST: ${QDRANT_HOST:-qdrant}
+      QDRANT_PORT: ${QDRANT_PORT:-6333}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      # Gemini API
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # CORS
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3011,http://frontend:3000}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 7d
+      # Azure AD - NO CONFIGURADO
+      AZURE_AD_CLIENT_ID: ""
+      AZURE_AD_CLIENT_SECRET: ""
+      AZURE_AD_TENANT_ID: ""
+      AZURE_AD_REDIRECT_URI: ""
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
-      - qdrant-catalog-network
-    volumes:
-      - ./backend/src:/app/src
-    command: npm run start:dev
-
+      - traefik-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+ 
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://backend:3001/api
+    container_name: bip2-qa-frontend
+    ports:
+      - "3011:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3001/api
+      NODE_ENV: production
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - traefik-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+ 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
-
+    driver: local
+  qdrant_data:
+    driver: local
+ 
 networks:
-  qdrant-catalog-network:
-    driver: bridge
+  traefik-net:
+    external: true
