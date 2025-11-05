@@ -3,21 +3,24 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Asegura dependencias de desarrollo para compilar
+# Herramientas para compilar posibles dependencias nativas (mysql2/pg/etc.)
+RUN apk add --no-cache python3 make g++
+
+# Instalar dependencias de desarrollo para compilar
 ENV NODE_ENV=development
 
-# Copiar package files primero para cache
+# Copiar package files primero para aprovechar cache
 COPY package*.json ./
 
-# Instalar dependencias (usa ci si hay lockfile; fallback a install con legacy peer deps)
+# Instalar dependencias (usa ci si hay lock; fallback a install con legacy peer deps)
 RUN npm ci || npm install --legacy-peer-deps
 
-# Copiar el resto del código
+# Copiar el resto del código (tsconfig.json, nest-cli.json, src, etc.)
 COPY . .
 
-# Verificaciones mínimas y build
+# Verificación y build (NestJS)
 RUN node --version && npm --version
-RUN npm run build || (echo "Build failed" && exit 1)
+RUN npm run build
 
 # Stage 2: Runtime
 FROM node:20-alpine AS runner
