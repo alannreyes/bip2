@@ -1,13 +1,16 @@
-
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Install build dependencies (some npm packages need these)
+RUN apk add --no-cache python3 make g++
+
+# Copy package files first (for better layer caching)
 COPY package*.json ./
 COPY nest-cli.json ./
+COPY tsconfig.json ./
 
-# Install ALL dependencies (including devDependencies for build)
+# Install ALL dependencies (devDependencies needed for build)
 RUN npm ci
 
 # Copy source code
@@ -23,4 +26,4 @@ RUN npm ci --only=production && npm cache clean --force
 EXPOSE 3001
 
 # Start the application
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/main.js"]
