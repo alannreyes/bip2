@@ -6,8 +6,10 @@ WORKDIR /app
 # Ensure NODE_ENV is not production to install devDependencies
 ENV NODE_ENV=development
 
-# Copy entire backend directory (context is repo root)
-COPY backend/ ./
+# Copy package files first (individual files work better with remote context)
+COPY backend/package*.json ./
+COPY backend/nest-cli.json ./
+COPY backend/tsconfig.json ./
 
 # Install all dependencies (including devDependencies for build)
 RUN npm install --legacy-peer-deps
@@ -17,6 +19,9 @@ RUN node --version && npm --version
 
 # Verify nest CLI is installed
 RUN test -f node_modules/.bin/nest || (echo "ERROR: nest CLI not found after npm install" && npm list @nestjs/cli && exit 1)
+
+# Copy source code directory
+COPY backend/src ./src
 
 # Build application - use explicit path to nest CLI
 RUN node_modules/.bin/nest build || npm run build || (echo "Build failed" && exit 1)
