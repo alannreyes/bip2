@@ -3,8 +3,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install build tools
-RUN apk add --no-cache python3 make g++ curl
+# Update package index and install build tools
+RUN apk update && apk add --no-cache python3 make g++ curl
 
 # Copy package files
 COPY package*.json ./
@@ -25,8 +25,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install curl for healthchecks
-RUN apk add --no-cache curl
+# Update package index and install curl for healthchecks
+RUN apk update && apk add --no-cache curl
 
 # Copy package files
 COPY package*.json ./
