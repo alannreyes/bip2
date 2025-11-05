@@ -2,6 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install build dependencies (needed for some native modules)
+RUN apk add --no-cache python3 make g++
+
 # Verify node and npm are available
 RUN node --version && npm --version
 
@@ -11,20 +14,29 @@ COPY nest-cli.json ./
 COPY tsconfig.json ./
 
 # Install ALL dependencies (devDependencies needed for build)
-# Using npm install instead of npm ci for better compatibility
-RUN npm install
+RUN npm install --legacy-peer-deps
 
-# Verify nest CLI is installed
+# Verify nest CLI is installed and available
 RUN ls -la node_modules/.bin/ | grep nest || echo "nest CLI not found in node_modules/.bin"
+RUN test -f node_modules/.bin/nest || (echo "ERROR: nest CLI not found" && exit 1)
 
 # Copy source code
 COPY . .
 
-# Build the application - use direct path to nest CLI
-RUN ./node_modules/.bin/nest build
+# Build the application - try multiple methods for compatibility
+RUN npm run build || \
+    ./node_modules/.bin/nest build || \
+    npx nest build || \
+    (echo "ERROR: All build methods failed" && exit 1)
+
+# Verify build output exists
+RUN test -d dist && test -f dist/main.js || (echo "ERROR: Build output not found" && exit 1)
 
 # Remove devDependencies to reduce image size
 RUN npm prune --production && npm cache clean --force
+
+# Remove build dependencies
+RUN apk del python3 make g++
 
 # Expose port
 EXPOSE 3001
