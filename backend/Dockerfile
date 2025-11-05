@@ -12,11 +12,8 @@ COPY package*.json ./
 # Instalar dependencias incluyendo devDependencies
 RUN npm install
 
-# Copiar archivos de configuración
-COPY nest-cli.json tsconfig.json ./
-
-# Copiar el código fuente
-COPY src/ ./src/
+# Copiar todo el contenido del proyecto
+COPY . .
 
 # Construir la aplicación
 RUN npm run build
