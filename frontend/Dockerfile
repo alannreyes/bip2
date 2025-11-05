@@ -1,38 +1,35 @@
-# Multi-stage build for Next.js (Debian)
-FROM node:20-bookworm-slim AS builder
+# Stage 1: Builder (Next.js)
+FROM node:20 AS builder
 
 WORKDIR /app
 
-# Copia package files e instala dependencias (incluye dev para build)
+# Dependencias para build (dev incluidas)
 COPY package*.json ./
 RUN npm ci || npm install
 
-# Copia el resto del código
+# Código fuente
 COPY . .
 
-# Construye la app (requiere output: 'standalone' en next.config)
+# Build (requiere next.config con output: 'standalone')
 RUN npm run build
 
-# Production image (standalone)
-FROM node:20-bookworm-slim AS runner
+# Stage 2: Runtime (standalone, ligero)
+FROM node:20-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Crear usuario no root
-RUN useradd -m -u 1001 nextjs
-
-# Copiar artefactos necesarios desde el builder
+# Copiamos artefactos standalone
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Permisos
-RUN chown -R nextjs:nextjs /app
-USER nextjs
+# Ajuste de permisos para usuario 'node'
+RUN chown -R node:node /app
+USER node
 
 EXPOSE 3000
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
 CMD ["node", "server.js"]
