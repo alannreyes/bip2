@@ -3,7 +3,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install build dependencies (needed for some native modules)
-RUN apk add --no-cache python3 make g++
+RUN apk update && apk add --no-cache python3 build-base
 
 # Verify node and npm are available
 RUN node --version && npm --version
@@ -36,7 +36,7 @@ RUN test -d dist && test -f dist/main.js || (echo "ERROR: Build output not found
 RUN npm prune --production && npm cache clean --force
 
 # Remove build dependencies
-RUN apk del python3 make g++
+RUN apk del python3 build-base
 
 # Expose port
 EXPOSE 3001
