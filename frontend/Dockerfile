@@ -17,10 +17,11 @@ COPY . .
 # Build - Next.js manejará NODE_ENV internamente
 RUN npm run build 2>&1
 
-# Runtime
+# Runtime - usar standalone server
 ENV NODE_ENV=production
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-CMD ["npx", "next", "start", "-H", "0.0.0.0", "-p", "3000"]
+# Con output: standalone, usar el servidor standalone
+CMD ["node", ".next/standalone/server.js"]
