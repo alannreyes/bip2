@@ -17,8 +17,21 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build - con más memoria y captura de errores
-RUN NODE_OPTIONS='--max-old-space-size=4096' npx next build
+# Build - con más memoria y output completo
+RUN echo "=== Starting Next.js build ===" && \
+    echo "=== Node version ===" && \
+    node --version && \
+    echo "=== NPM version ===" && \
+    npm --version && \
+    echo "=== Next.js version ===" && \
+    npm list next && \
+    echo "=== Running build (all output will be shown) ===" && \
+    NODE_OPTIONS='--max-old-space-size=4096' npx next build 2>&1 || ( \
+      echo "=== BUILD FAILED ===" && \
+      echo "=== Checking for TypeScript errors ===" && \
+      npx tsc --noEmit 2>&1 | head -100 || true && \
+      exit 1 \
+    )
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
