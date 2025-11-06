@@ -17,8 +17,8 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build - mostrar output completo sin filtros
-RUN npx next build
+# Build - con modo verbose para ver todos los errores
+RUN NODE_OPTIONS='--max-old-space-size=4096' npx next build --debug 2>&1 || npx next build 2>&1
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
