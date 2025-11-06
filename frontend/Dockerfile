@@ -23,44 +23,15 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Copy source code and config files
 COPY . .
 
-# Build application - capture full error output
+# Build application
 RUN echo "=== Starting build process ===" && \
-    echo "=== Node version ===" && \
     node --version && \
-    echo "=== NPM version ===" && \
     npm --version && \
-    echo "=== Checking Next.js ===" && \
-    (npm list next || echo "Next.js not found in package.json") || true && \
-    echo "=== Attempting npm run build ===" && \
-    (NODE_OPTIONS='--max-old-space-size=4096' npm run build 2>&1 | tee /tmp/build.log; BUILD_EXIT=$?) && \
-    if [ "$BUILD_EXIT" -ne 0 ]; then \
-      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
-      echo "=== Full build log (last 200 lines) ==="; \
-      tail -200 /tmp/build.log || cat /tmp/build.log; \
-      echo "=== Checking for TypeScript errors ==="; \
-      npx tsc --noEmit 2>&1 | head -100 || true; \
-      echo "=== Listing app directory ==="; \
-      ls -la app/ 2>/dev/null || echo "app directory does not exist"; \
-      echo "=== Checking if .next directory exists ==="; \
-      ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
-      exit $BUILD_EXIT; \
-    fi && \
-    echo "=== Build completed successfully ===" && \
-    echo "=== Verifying BUILD_ID ===" && \
-    if [ -f .next/BUILD_ID ]; then \
-      echo "BUILD_ID found: $(cat .next/BUILD_ID)"; \
-      echo "=== Build verification successful ==="; \
-    else \
-      echo "ERROR: BUILD_ID not found after build"; \
-      echo "=== Contents of .next directory ==="; \
-      ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
-      echo "=== Last 50 lines of build log ==="; \
-      tail -50 /tmp/build.log || echo "Build log not available"; \
-      exit 1; \
-    fi
+    echo "=== Running npm build ===" && \
+    NODE_OPTIONS='--max-old-space-size=4096' npm run build
 
-# Verify build output exists - Next.js requires BUILD_ID file
-RUN test -d .next && test -f .next/BUILD_ID && echo "Build output verified with BUILD_ID" || (echo "ERROR: .next directory or BUILD_ID not found after build" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && exit 1)
+# Verify BUILD_ID exists
+RUN test -f .next/BUILD_ID && echo "BUILD_ID verified: $(cat .next/BUILD_ID)" || (echo "ERROR: BUILD_ID not found" && ls -la .next/ 2>/dev/null && exit 1)
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
