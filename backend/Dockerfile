@@ -30,14 +30,16 @@ COPY src ./src
 # Add node_modules/.bin to PATH for easier access to CLI tools
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
-# Build application with detailed error output
-RUN echo "Starting build..." && \
-    echo "PATH: $PATH" && \
-    echo "Checking nest CLI:" && \
-    (nest --version || npx nest --version || node_modules/.bin/nest --version || echo "nest CLI not found in PATH") && \
-    echo "Running build..." && \
-    (npm run build || npx nest build || node_modules/.bin/nest build || (echo "=== BUILD FAILED ===" && exit 1)) && \
-    echo "Build completed successfully"
+# Verify structure before build
+RUN echo "=== Pre-build verification ===" && \
+    echo "Current directory: $(pwd)" && \
+    echo "Source files:" && ls -la src/ | head -10 && \
+    echo "Node modules bin:" && ls -la node_modules/.bin/ | grep -E "(nest|tsc)" || echo "No build tools found" && \
+    echo "Package.json scripts:" && cat package.json | grep -A 2 '"build"'
+
+# Build application - try multiple methods
+RUN echo "=== Starting build ===" && \
+    npm run build 2>&1
 
 # Verify build output exists
 RUN test -d dist && test -f dist/main.js || (echo "ERROR: Build output not found" && exit 1)
