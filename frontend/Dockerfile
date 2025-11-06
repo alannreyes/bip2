@@ -27,7 +27,10 @@ RUN set -e; \
     echo "=== Next.js version ==="; \
     npm list next || echo "Next.js not in package.json"; \
     echo "=== Running build ==="; \
-    npm run build 2>&1 || BUILD_EXIT=$?; \
+    echo "=== Checking if next is available ==="; \
+    npx next --version || echo "next not found in PATH"; \
+    echo "=== Executing build ==="; \
+    npx next build 2>&1 || BUILD_EXIT=$?; \
     if [ -n "$BUILD_EXIT" ]; then \
       echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
       echo "=== Checking if .next directory exists ==="; \
