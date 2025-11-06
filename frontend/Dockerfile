@@ -17,33 +17,8 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build con captura de errores y validación
-RUN set -e; \
-    echo "=== Starting Next.js build ==="; \
-    echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"; \
-    echo "=== Next.js version ==="; \
-    npx next --version || npm list next; \
-    echo "=== Running build ==="; \
-    npm run build 2>&1 | tee /tmp/build.log; \
-    BUILD_EXIT=${PIPESTATUS[0]}; \
-    if [ "$BUILD_EXIT" -ne 0 ]; then \
-      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
-      echo "=== Full build log ==="; \
-      cat /tmp/build.log; \
-      exit $BUILD_EXIT; \
-    fi; \
-    echo "=== Build completed successfully ==="; \
-    echo "=== Verifying build output ==="; \
-    echo "=== Contents of .next directory ==="; \
-    ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
-    if [ -d ".next/standalone" ]; then \
-      echo "=== Standalone directory found (using standalone mode) ==="; \
-      ls -la .next/standalone | head -10; \
-    else \
-      echo "=== Standalone not found (using full copy mode) ==="; \
-      echo "=== Checking .next structure ==="; \
-      ls -la .next/ | head -20; \
-    fi
+# Build simplificado
+RUN npm run build
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
