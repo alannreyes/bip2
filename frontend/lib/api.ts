@@ -48,7 +48,7 @@ export const syncApi = {
 
 // Search API
 export const searchApi = {
-  searchByText: (params: { query: string; collections: string[]; limit?: number; marca?: string; cliente?: string; includeInternetSearch?: boolean }) =>
+  searchByText: (params: { query: string; collections: string[]; limit?: number; marca?: string; cliente?: string; includeInternetSearch?: boolean; useLLMFilter?: boolean }) =>
     api.post('/search/text', params),
   searchByImage: (file: File, collection: string, limit: number = 10) => {
     const formData = new FormData();
