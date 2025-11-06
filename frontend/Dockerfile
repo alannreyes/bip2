@@ -1,32 +1,26 @@
-# Dockerfile Ultra Simplificado - Una sola etapa
 FROM node:20
 
 WORKDIR /app
 
-# Variables de entorno
+# Variables
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-
-# IMPORTANTE: NODE_ENV=development durante build para instalar devDependencies
 ENV NODE_ENV=development
 
-# Copiar e instalar
+# Instalar dependencias
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
 # Copiar código
 COPY . .
 
-# Build (con NODE_ENV=development para tener todas las herramientas)
-RUN npm run build
+# Build - mostrar TODO el output
+RUN npm run build 2>&1
 
-# Cambiar a production solo para runtime
+# Runtime
 ENV NODE_ENV=production
-
-# Exponer puerto
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Iniciar
-CMD ["npx", "next", "start", "-p", "3000"]
+CMD ["npx", "next", "start", "-H", "0.0.0.0", "-p", "3000"]
