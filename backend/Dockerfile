@@ -18,15 +18,26 @@ RUN npm install --legacy-peer-deps
 # Verify npm and node are available
 RUN node --version && npm --version
 
-# Verify @nestjs/cli is installed (optional check, but don't fail if path is different)
-RUN npm list @nestjs/cli || echo "Warning: @nestjs/cli not found in list, but continuing..."
+# Verify critical packages are installed
+RUN npm list typescript @nestjs/cli || echo "Warning: Some packages may not be listed"
+
+# List installed packages for debugging
+RUN echo "Node modules:" && ls -la node_modules/.bin/ | head -20 || true
 
 # Copy source code
 COPY src ./src
 
-# Build application - use npm run build which is configured in package.json
-# This is more reliable than trying to find nest CLI directly
-RUN npm run build || (echo "Build failed" && exit 1)
+# Add node_modules/.bin to PATH for easier access to CLI tools
+ENV PATH="/app/node_modules/.bin:${PATH}"
+
+# Build application with detailed error output
+RUN echo "Starting build..." && \
+    echo "PATH: $PATH" && \
+    echo "Checking nest CLI:" && \
+    (nest --version || npx nest --version || node_modules/.bin/nest --version || echo "nest CLI not found in PATH") && \
+    echo "Running build..." && \
+    (npm run build || npx nest build || node_modules/.bin/nest build || (echo "=== BUILD FAILED ===" && exit 1)) && \
+    echo "Build completed successfully"
 
 # Verify build output exists
 RUN test -d dist && test -f dist/main.js || (echo "ERROR: Build output not found" && exit 1)
