@@ -17,12 +17,12 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build - mostrar todo el output
-RUN echo "=== Starting Next.js build ===" && \
-    node --version && \
-    npm --version && \
-    echo "=== Executing npm run build ===" && \
-    npm run build
+# Build - comandos separados para mejor diagnóstico
+RUN echo "=== Starting Next.js build ==="
+RUN node --version
+RUN npm --version
+RUN echo "=== Executing npm run build ==="
+RUN npm run build
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
