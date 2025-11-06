@@ -29,11 +29,21 @@ RUN echo "=== Starting build process ===" && \
     npm --version && \
     echo "=== Checking TypeScript ===" && \
     npx tsc --version && \
+    echo "=== Checking Next.js ===" && \
+    npx next --version && \
+    echo "=== Checking config files ===" && \
+    ls -la *.config.* *.json 2>/dev/null || echo "Some config files may be missing" && \
+    echo "=== Running TypeScript check first ===" && \
+    npx tsc --noEmit 2>&1 | head -50 || echo "TypeScript check completed with errors" && \
     echo "=== Running npm build ===" && \
-    NODE_OPTIONS='--max-old-space-size=6144' npm run build || \
-    (echo "=== BUILD FAILED - Checking for errors ===" && \
+    NODE_OPTIONS='--max-old-space-size=6144' npm run build 2>&1 | tee /tmp/build.log || \
+    (echo "=== BUILD FAILED ===" && \
+     echo "=== Build log (last 100 lines) ===" && \
+     tail -100 /tmp/build.log 2>/dev/null || echo "No build log available" && \
      echo "=== TypeScript errors ===" && \
-     npx tsc --noEmit 2>&1 | head -30 && \
+     npx tsc --noEmit 2>&1 | head -50 || echo "No TypeScript errors found" && \
+     echo "=== Next.js info ===" && \
+     npx next info 2>&1 || echo "Next.js info failed" && \
      exit 1)
 
 # Verify BUILD_ID exists
