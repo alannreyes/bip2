@@ -18,14 +18,15 @@ RUN npm install --legacy-peer-deps
 # Verify npm and node are available
 RUN node --version && npm --version
 
-# Verify nest CLI is installed
-RUN test -f node_modules/.bin/nest || (echo "ERROR: nest CLI not found after npm install" && npm list @nestjs/cli && exit 1)
+# Verify @nestjs/cli is installed (optional check, but don't fail if path is different)
+RUN npm list @nestjs/cli || echo "Warning: @nestjs/cli not found in list, but continuing..."
 
 # Copy source code
 COPY src ./src
 
-# Build application - use explicit path to nest CLI
-RUN node_modules/.bin/nest build || npm run build || (echo "Build failed" && exit 1)
+# Build application - use npm run build which is configured in package.json
+# This is more reliable than trying to find nest CLI directly
+RUN npm run build || (echo "Build failed" && exit 1)
 
 # Verify build output exists
 RUN test -d dist && test -f dist/main.js || (echo "ERROR: Build output not found" && exit 1)
