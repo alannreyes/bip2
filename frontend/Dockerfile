@@ -17,8 +17,26 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build simplificado
-RUN npm run build
+# Build con verificación y captura de errores
+RUN set -e; \
+    echo "=== Starting Next.js build ==="; \
+    echo "=== Node version ==="; \
+    node --version; \
+    echo "=== NPM version ==="; \
+    npm --version || echo "NPM not found"; \
+    echo "=== Next.js version ==="; \
+    npm list next || echo "Next.js not in package.json"; \
+    echo "=== Running build ==="; \
+    npm run build 2>&1 || BUILD_EXIT=$?; \
+    if [ -n "$BUILD_EXIT" ]; then \
+      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
+      echo "=== Checking if .next directory exists ==="; \
+      ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
+      exit $BUILD_EXIT; \
+    fi; \
+    echo "=== Build completed successfully ==="; \
+    echo "=== Verifying build output ==="; \
+    ls -la .next/ 2>/dev/null || (echo "ERROR: .next directory not found after build" && exit 1)
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
