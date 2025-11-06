@@ -24,7 +24,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Ajuste de permisos para usuario 'node'
+# Permisos para el usuario 'node'
 RUN chown -R node:node /app
 USER node
 
