@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: https://github.com/alannreyes/bip2.git#main:frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${BACKEND_URL:-http://192.168.40.197:3001/api}
+    container_name: bip2-frontend
+    ports:
+      - "${FRONTEND_PORT:-3011}:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${BACKEND_URL:-http://192.168.40.197:3001/api}
+    restart: unless-stopped
+    networks:
+      - traefik-net
+
+networks:
+  traefik-net:
+    external: true
+

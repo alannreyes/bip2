@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: bip2-postgres
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE_NAME:-qdrant_sync}
+    ports:
+      - "${DATABASE_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - traefik-net
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: bip2-redis
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      sh -c "if [ -n \"$${REDIS_PASSWORD}\" ]; then 
+        redis-server --requirepass $${REDIS_PASSWORD}; 
+      else 
+        redis-server; 
+      fi"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - traefik-net
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: bip2-qdrant
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: "6334"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - traefik-net
+
+  # NestJS Backend
+  backend:
+    build:
+      context: https://github.com/alannreyes/bip2.git#main:backend
+      dockerfile: Dockerfile
+    container_name: bip2-backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      APP_URL: http://backend:3001
+      # PostgreSQL - Usa el contenedor postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${DATABASE_NAME:-qdrant_sync}
+      # Redis - Usa el contenedor redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # Qdrant - Usa el contenedor qdrant
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      # Seguridad / APIs
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://192.168.40.197:3011}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - traefik-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+
+networks:
+  traefik-net:
+    external: true
+
