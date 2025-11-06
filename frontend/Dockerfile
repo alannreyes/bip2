@@ -21,6 +21,7 @@ RUN npm run build
 # Exponer puerto
 EXPOSE 3000
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 # Iniciar
-CMD ["npm", "start"]
+CMD ["npx", "next", "start", "-p", "3000"]
