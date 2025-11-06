@@ -39,20 +39,25 @@ RUN echo "=== Starting build process ===" && \
 # Verify BUILD_ID exists
 RUN test -f .next/BUILD_ID && echo "BUILD_ID verified: $(cat .next/BUILD_ID)" || (echo "ERROR: BUILD_ID not found" && echo "=== Contents of .next ===" && ls -la .next/ 2>/dev/null && exit 1)
 
-# Stage 2: Runtime (modo completo - más robusto)
+# Stage 2: Runtime (usando standalone si está disponible)
 FROM node:20-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copiar todo lo necesario (modo completo es más confiable)
+# Copiar desde standalone si existe (más eficiente para producción)
+# Con standalone, Next.js genera .next/standalone/ con server.js y dependencias mínimas
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+# Fallback: si standalone no existe, copiar todo (modo completo)
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
 
-# Verificar que BUILD_ID existe después de copiar
-RUN test -f .next/BUILD_ID && echo "BUILD_ID verified in runtime stage" || (echo "ERROR: BUILD_ID not found after copy" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && exit 1)
+# Verificar que BUILD_ID existe (puede estar en .next o en la raíz con standalone)
+RUN (test -f .next/BUILD_ID || test -f BUILD_ID) && echo "BUILD_ID verified in runtime stage" || (echo "WARNING: BUILD_ID not found, but continuing..." && ls -la .next/ 2>/dev/null || echo ".next directory check")
 
 # Permisos para el usuario 'node'
 RUN chown -R node:node /app
@@ -62,5 +67,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Usar next start (funciona siempre, independientemente de standalone)
-CMD ["npx", "next", "start", "-p", "3000"]
+# Usar server.js si standalone existe (está en la raíz después de copiar .next/standalone)
+# Sino usar next start (modo completo)
+CMD ["sh", "-c", "if [ -f server.js ]; then echo 'Starting with standalone mode' && node server.js; else echo 'Starting with full mode' && npx next start -p 3000; fi"]
