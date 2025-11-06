@@ -20,6 +20,7 @@ RUN npm run build
 
 # Exponer puerto
 EXPOSE 3000
+ENV PORT=3000
 
 # Iniciar
 CMD ["npm", "start"]
