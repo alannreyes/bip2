@@ -20,9 +20,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copiamos artefactos standalone
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# Copiar public si existe (crear directorio primero)
+RUN mkdir -p ./public
+COPY --from=builder --chown=node:node /app/public ./public/
 
 # Permisos para el usuario 'node'
 RUN chown -R node:node /app
