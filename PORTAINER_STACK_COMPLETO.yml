@@ -117,6 +117,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://backend:3001/api
+      no_cache: true
     container_name: bip2-frontend
     ports:
       - "${FRONTEND_PORT:-3011}:3000"
