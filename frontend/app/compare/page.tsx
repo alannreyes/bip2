@@ -52,7 +52,7 @@ export default function ComparePage() {
     try {
       const response = await searchApi.searchByText({
         query: searchQuery,
-        collection: selectedCollection,
+        collections: [selectedCollection],
         limit,
       });
       setInitialResults(response.data.results || []);
