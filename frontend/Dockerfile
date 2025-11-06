@@ -17,21 +17,32 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build - con más memoria y output completo
-RUN echo "=== Starting Next.js build ===" && \
-    echo "=== Node version ===" && \
-    node --version && \
-    echo "=== NPM version ===" && \
-    npm --version && \
-    echo "=== Next.js version ===" && \
-    npm list next && \
-    echo "=== Running build (all output will be shown) ===" && \
-    NODE_OPTIONS='--max-old-space-size=4096' npx next build 2>&1 || ( \
-      echo "=== BUILD FAILED ===" && \
-      echo "=== Checking for TypeScript errors ===" && \
-      npx tsc --noEmit 2>&1 | head -100 || true && \
-      exit 1 \
-    )
+# Build application - capture full error output (mismo patrón que backend)
+RUN set -e; \
+    echo "=== Starting build process ==="; \
+    echo "=== Node version ==="; \
+    node --version; \
+    echo "=== NPM version ==="; \
+    npm --version; \
+    echo "=== Checking Next.js ==="; \
+    (npm list next || echo "Next.js not found in package.json") || true; \
+    echo "=== Attempting npm run build ==="; \
+    NODE_OPTIONS='--max-old-space-size=4096' npm run build 2>&1 | tee /tmp/build.log || BUILD_EXIT=$?; \
+    if [ -n "$BUILD_EXIT" ]; then \
+      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
+      echo "=== Full build log ==="; \
+      cat /tmp/build.log; \
+      echo "=== Checking for TypeScript errors ==="; \
+      npx tsc --noEmit 2>&1 | head -100 || true; \
+      echo "=== Listing app directory ==="; \
+      ls -la app/ 2>/dev/null || echo "app directory does not exist"; \
+      echo "=== Checking if .next directory exists ==="; \
+      ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
+      exit $BUILD_EXIT; \
+    fi
+
+# Verify build output exists
+RUN test -d .next && echo "Build output verified" || (echo "ERROR: .next directory not found after build" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && exit 1)
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
