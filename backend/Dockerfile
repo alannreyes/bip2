@@ -8,7 +8,8 @@ WORKDIR /app
 ENV NODE_ENV=development
 
 # Copy package files first (for better layer caching)
-COPY package*.json ./
+# Note: Only copy package.json, let npm generate package-lock.json
+COPY package.json ./
 COPY nest-cli.json ./
 COPY tsconfig.json ./
 
