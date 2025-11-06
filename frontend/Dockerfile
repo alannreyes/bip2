@@ -42,7 +42,17 @@ RUN set -e; \
     fi
 
 # Verify build output exists
-RUN test -d .next && echo "Build output verified" || (echo "ERROR: .next directory not found after build" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && exit 1)
+RUN if [ -d .next ]; then \
+      echo "=== Build output verified ==="; \
+      ls -la .next/ | head -10; \
+    else \
+      echo "=== ERROR: .next directory not found after build ==="; \
+      echo "=== Listing current directory ==="; \
+      ls -la; \
+      echo "=== Checking if build actually ran ==="; \
+      test -f /tmp/build.log && (echo "Build log exists, showing last 50 lines:" && tail -50 /tmp/build.log) || echo "No build log found"; \
+      exit 1; \
+    fi
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
