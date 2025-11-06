@@ -24,7 +24,8 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 COPY . .
 
 # Build application - show errors directly with more memory
-RUN echo "=== Starting build process ===" && \
+RUN set -e && \
+    echo "=== Starting build process ===" && \
     node --version && \
     npm --version && \
     echo "=== Checking TypeScript ===" && \
@@ -34,20 +35,13 @@ RUN echo "=== Starting build process ===" && \
     echo "=== Checking config files ===" && \
     ls -la *.config.* *.json 2>/dev/null || echo "Some config files may be missing" && \
     echo "=== Running TypeScript check first ===" && \
-    npx tsc --noEmit 2>&1 | head -50 || echo "TypeScript check completed with errors" && \
+    (npx tsc --noEmit 2>&1 | head -50 || echo "TypeScript check completed") && \
     echo "=== Running npm build ===" && \
-    NODE_OPTIONS='--max-old-space-size=6144' npm run build 2>&1 | tee /tmp/build.log || \
-    (echo "=== BUILD FAILED ===" && \
-     echo "=== Build log (last 100 lines) ===" && \
-     tail -100 /tmp/build.log 2>/dev/null || echo "No build log available" && \
-     echo "=== TypeScript errors ===" && \
-     npx tsc --noEmit 2>&1 | head -50 || echo "No TypeScript errors found" && \
-     echo "=== Next.js info ===" && \
-     npx next info 2>&1 || echo "Next.js info failed" && \
-     exit 1)
-
-# Verify BUILD_ID exists
-RUN test -f .next/BUILD_ID && echo "BUILD_ID verified: $(cat .next/BUILD_ID)" || (echo "ERROR: BUILD_ID not found" && echo "=== Contents of .next ===" && ls -la .next/ 2>/dev/null && exit 1)
+    NODE_OPTIONS='--max-old-space-size=6144' npm run build && \
+    echo "=== Build completed successfully ===" && \
+    echo "=== Verifying build output ===" && \
+    ls -la .next/ 2>/dev/null || echo "WARNING: .next directory not found" && \
+    test -f .next/BUILD_ID && echo "BUILD_ID verified: $(cat .next/BUILD_ID)" || (echo "ERROR: BUILD_ID not found after build" && echo "=== Contents of .next ===" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && echo "=== Build may have failed silently ===" && exit 1)
 
 # Stage 2: Runtime (usando standalone si está disponible)
 FROM node:20-slim AS runner
