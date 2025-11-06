@@ -23,9 +23,8 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Copy source code and config files
 COPY . .
 
-# Build application - show errors directly with more memory
-RUN set -e && \
-    echo "=== Starting build process ===" && \
+# Build application - capture all output including errors
+RUN echo "=== Starting build process ===" && \
     node --version && \
     npm --version && \
     echo "=== Checking TypeScript ===" && \
@@ -36,12 +35,21 @@ RUN set -e && \
     ls -la *.config.* *.json 2>/dev/null || echo "Some config files may be missing" && \
     echo "=== Running TypeScript check first ===" && \
     (npx tsc --noEmit 2>&1 | head -50 || echo "TypeScript check completed") && \
-    echo "=== Running npm build ===" && \
-    NODE_OPTIONS='--max-old-space-size=6144' npm run build && \
+    echo "=== Running npm build (capturing all output) ===" && \
+    NODE_OPTIONS='--max-old-space-size=6144' npm run build 2>&1 | tee /tmp/build.log || \
+    (BUILD_EXIT=$? && \
+     echo "=== BUILD FAILED with exit code: $BUILD_EXIT ===" && \
+     echo "=== Full build output ===" && \
+     cat /tmp/build.log 2>/dev/null || echo "No build log available" && \
+     echo "=== TypeScript errors ===" && \
+     npx tsc --noEmit 2>&1 | head -100 || echo "No TypeScript errors" && \
+     echo "=== Next.js info ===" && \
+     npx next info 2>&1 || echo "Next.js info failed" && \
+     exit 1) && \
     echo "=== Build completed successfully ===" && \
     echo "=== Verifying build output ===" && \
     ls -la .next/ 2>/dev/null || echo "WARNING: .next directory not found" && \
-    test -f .next/BUILD_ID && echo "BUILD_ID verified: $(cat .next/BUILD_ID)" || (echo "ERROR: BUILD_ID not found after build" && echo "=== Contents of .next ===" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && echo "=== Build may have failed silently ===" && exit 1)
+    test -f .next/BUILD_ID && echo "BUILD_ID verified: $(cat .next/BUILD_ID)" || (echo "ERROR: BUILD_ID not found after build" && echo "=== Contents of .next ===" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && exit 1)
 
 # Stage 2: Runtime (usando standalone si está disponible)
 FROM node:20-slim AS runner
