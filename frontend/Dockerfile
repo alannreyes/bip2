@@ -14,19 +14,30 @@ RUN npm ci || npm install --legacy-peer-deps
 # Código fuente
 COPY . .
 
-# Build con captura de errores
+# Build con captura de errores y validación
 RUN set -e; \
     echo "=== Starting Next.js build ==="; \
     echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"; \
-    npm run build 2>&1 | tee /tmp/build.log || BUILD_EXIT=$?; \
-    if [ -n "$BUILD_EXIT" ]; then \
+    npm run build 2>&1 | tee /tmp/build.log; \
+    BUILD_EXIT=${PIPESTATUS[0]}; \
+    if [ "$BUILD_EXIT" -ne 0 ]; then \
       echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
       echo "=== Full build log ==="; \
       cat /tmp/build.log; \
       exit $BUILD_EXIT; \
     fi; \
     echo "=== Build completed successfully ==="; \
-    ls -la .next/standalone 2>/dev/null || echo "WARNING: standalone directory not found"
+    echo "=== Verifying build output ==="; \
+    if [ ! -d ".next/standalone" ]; then \
+      echo "ERROR: .next/standalone directory not found!"; \
+      echo "=== Contents of .next directory ==="; \
+      ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
+      echo "=== Full build log ==="; \
+      cat /tmp/build.log; \
+      exit 1; \
+    fi; \
+    echo "=== Standalone directory found ==="; \
+    ls -la .next/standalone | head -10
 
 # Stage 2: Runtime (standalone, ligero)
 FROM node:20-slim AS runner
