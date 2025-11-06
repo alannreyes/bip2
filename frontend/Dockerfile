@@ -17,7 +17,7 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build con verificación y captura de errores (sin set -e para mejor control)
+# Build con verificación (compatible con /bin/sh)
 RUN echo "=== Starting Next.js build ===" && \
     echo "=== Node version ===" && \
     node --version && \
@@ -26,16 +26,12 @@ RUN echo "=== Starting Next.js build ===" && \
     echo "=== Checking Next.js ===" && \
     (npm list next 2>/dev/null || echo "Next.js checking...") && \
     echo "=== Executing build ===" && \
-    npm run build 2>&1 | tee /tmp/build.log && \
-    BUILD_EXIT=${PIPESTATUS[0]} && \
-    if [ "$BUILD_EXIT" -ne 0 ]; then \
-      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ===" && \
-      echo "=== Full build log ===" && \
-      cat /tmp/build.log && \
+    npm run build || ( \
+      echo "=== BUILD FAILED ===" && \
       echo "=== Checking .next directory ===" && \
       ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && \
-      exit $BUILD_EXIT; \
-    fi && \
+      exit 1 \
+    ) && \
     echo "=== Build completed successfully ===" && \
     echo "=== Verifying build output ===" && \
     ls -la .next/ 2>/dev/null && \
