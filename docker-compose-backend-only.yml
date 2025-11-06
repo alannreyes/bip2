@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # NestJS Backend - SOLO ESTE POR AHORA
+  backend:
+    build:
+      context: https://github.com/alannreyes/bip2.git#main:backend
+      dockerfile: Dockerfile
+    container_name: bip2-backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      APP_URL: http://backend:3001
+      # PostgreSQL - Usa tus variables de entorno
+      DATABASE_HOST: ${DATABASE_HOST:-192.168.40.197}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${DATABASE_NAME:-qdrant_sync}
+      # Redis - Usa tus variables de entorno
+      REDIS_HOST: ${REDIS_HOST:-192.168.40.197}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # Qdrant - Usa tus variables de entorno
+      QDRANT_HOST: ${QDRANT_HOST:-192.168.40.197}
+      QDRANT_PORT: ${QDRANT_PORT:-6333}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      # Seguridad / APIs
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://192.168.40.197:3011}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # Azure AD (Opcional)
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID:-}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET:-}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID:-}
+      AZURE_AD_REDIRECT_URI: http://localhost:3001/api/auth/callback
+    restart: unless-stopped
+    networks:
+      - traefik-net
+
+networks:
+  traefik-net:
+    external: true
+
