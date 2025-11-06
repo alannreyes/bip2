@@ -7,15 +7,12 @@ WORKDIR /app
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
-# Instalar sharp para optimización de imágenes (requerido por Next.js)
-RUN npm install -g sharp
-
 # Dependencias para build (dev incluidas)
 COPY package*.json ./
 RUN npm ci || npm install --legacy-peer-deps
 
-# Instalar sharp localmente también
-RUN npm install sharp || echo "sharp installation optional"
+# Instalar sharp localmente (opcional, para optimización de imágenes)
+RUN npm install sharp --save-optional || echo "Warning: sharp installation failed, continuing without it"
 
 # Código fuente
 COPY . .
@@ -53,11 +50,6 @@ FROM node:20-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
-
-# Instalar dependencias del sistema para sharp
-RUN apt-get update && apt-get install -y \
-    libvips-dev \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copiar todo lo necesario (modo completo es más confiable)
 COPY --from=builder /app/package*.json ./
