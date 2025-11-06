@@ -111,13 +111,17 @@ services:
       - traefik-net
 
   # Frontend (Next.js)
+  # IMPORTANTE: Construye la imagen localmente primero con:
+  # cd ~/bip2/frontend && docker build -t bip2-frontend:latest .
   frontend:
-    build:
-      context: https://github.com/alannreyes/bip2.git#main:frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://backend:3001/api
-      no_cache: true
+    image: bip2-frontend:latest
+    pull_policy: never  # Usar imagen local, no intentar pull
+    # Si prefieres build en Portainer, descomenta esto y comenta 'image' arriba:
+    # build:
+    #   context: https://github.com/alannreyes/bip2.git#main:frontend
+    #   dockerfile: Dockerfile
+    #   args:
+    #     NEXT_PUBLIC_API_URL: http://backend:3001/api
     container_name: bip2-frontend
     ports:
       - "${FRONTEND_PORT:-3011}:3000"
