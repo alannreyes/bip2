@@ -20,8 +20,9 @@ export function useSyncJob(id: string) {
       return response.data;
     },
     enabled: !!id,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop refetching if job is completed, failed, or cancelled
+      const data = query.state.data as any;
       if (data?.status === 'completed' || data?.status === 'failed' || data?.status === 'cancelled') {
         return false;
       }
