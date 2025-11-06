@@ -3,15 +3,30 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
+# Build argument para API URL
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
 # Dependencias para build (dev incluidas)
 COPY package*.json ./
-RUN npm ci || npm install
+RUN npm ci || npm install --legacy-peer-deps
 
 # Código fuente
 COPY . .
 
-# Build (requiere next.config con output: 'standalone')
-RUN npm run build
+# Build con captura de errores
+RUN set -e; \
+    echo "=== Starting Next.js build ==="; \
+    echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"; \
+    npm run build 2>&1 | tee /tmp/build.log || BUILD_EXIT=$?; \
+    if [ -n "$BUILD_EXIT" ]; then \
+      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
+      echo "=== Full build log ==="; \
+      cat /tmp/build.log; \
+      exit $BUILD_EXIT; \
+    fi; \
+    echo "=== Build completed successfully ==="; \
+    ls -la .next/standalone 2>/dev/null || echo "WARNING: standalone directory not found"
 
 # Stage 2: Runtime (standalone, ligero)
 FROM node:20-slim AS runner
