@@ -17,19 +17,8 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build - verificar que todo esté en su lugar
-RUN echo "=== Starting Next.js build ===" && \
-    echo "=== Node version ===" && \
-    node --version && \
-    echo "=== NPM version ===" && \
-    npm --version && \
-    echo "=== Checking package.json ===" && \
-    ls -la package.json && \
-    cat package.json | grep -A 5 '"scripts"' && \
-    echo "=== Checking node_modules ===" && \
-    ls -la node_modules/.bin/next 2>/dev/null || echo "next not in node_modules/.bin" && \
-    echo "=== Executing build with npx ===" && \
-    npx next build
+# Build - mostrar output completo sin filtros
+RUN npx next build
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
