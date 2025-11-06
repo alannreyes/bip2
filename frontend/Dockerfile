@@ -17,24 +17,31 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build con verificación (compatible con /bin/sh)
+# Build con captura completa de errores
 RUN echo "=== Starting Next.js build ===" && \
     echo "=== Node version ===" && \
     node --version && \
     echo "=== NPM version ===" && \
     npm --version && \
-    echo "=== Checking Next.js ===" && \
-    (npm list next 2>/dev/null || echo "Next.js checking...") && \
-    echo "=== Executing build ===" && \
-    npm run build || ( \
-      echo "=== BUILD FAILED ===" && \
-      echo "=== Checking .next directory ===" && \
-      ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && \
-      exit 1 \
-    ) && \
+    echo "=== Next.js installed ===" && \
+    npm list next && \
+    echo "=== Executing build (output will be shown) ===" && \
+    npm run build; \
+    BUILD_EXIT=$?; \
+    if [ $BUILD_EXIT -ne 0 ]; then \
+      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
+      echo "=== Checking .next directory ==="; \
+      ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
+      echo "=== Checking for common issues ==="; \
+      echo "=== TypeScript check ==="; \
+      npx tsc --noEmit 2>&1 | head -50 || echo "TypeScript check failed or not available"; \
+      echo "=== Listing app directory ==="; \
+      ls -la app/ 2>/dev/null || echo "app directory does not exist"; \
+      exit $BUILD_EXIT; \
+    fi && \
     echo "=== Build completed successfully ===" && \
     echo "=== Verifying build output ===" && \
-    ls -la .next/ 2>/dev/null && \
+    ls -la .next/ && \
     echo "=== Build verification complete ==="
 
 # Stage 2: Runtime (modo completo - más robusto)
