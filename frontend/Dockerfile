@@ -5,7 +5,7 @@ WORKDIR /app
 # Variables
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NODE_ENV=development
+# NO establecer NODE_ENV aquí - npm instalará devDependencies automáticamente
 
 # Instalar dependencias
 COPY package*.json ./
@@ -14,7 +14,7 @@ RUN npm install --legacy-peer-deps
 # Copiar código
 COPY . .
 
-# Build - mostrar TODO el output
+# Build - Next.js manejará NODE_ENV internamente
 RUN npm run build 2>&1
 
 # Runtime

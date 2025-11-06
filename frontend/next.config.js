@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // output: 'standalone', // Comentado temporalmente para simplificar el build
+  output: 'standalone',
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
   },
@@ -13,12 +13,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  // Evitar problemas con páginas de error
-  experimental: {
-    missingSuspenseWithCSRBailout: false,
-  },
-  // Deshabilitar generación estática de páginas de error
-  output: 'standalone',
 };
 
 module.exports = nextConfig;
