@@ -23,15 +23,21 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Copy source code and config files
 COPY . .
 
-# Build application
+# Build application - capture errors with detailed output
 RUN echo "=== Starting build process ===" && \
     node --version && \
     npm --version && \
     echo "=== Running npm build ===" && \
-    NODE_OPTIONS='--max-old-space-size=4096' npm run build
+    NODE_OPTIONS='--max-old-space-size=4096' npm run build || \
+    (echo "=== BUILD FAILED - Showing error details ===" && \
+     echo "=== TypeScript check ===" && \
+     npx tsc --noEmit 2>&1 | head -50 || true && \
+     echo "=== Listing source files ===" && \
+     find app -name "*.tsx" -o -name "*.ts" | head -10 && \
+     exit 1)
 
 # Verify BUILD_ID exists
-RUN test -f .next/BUILD_ID && echo "BUILD_ID verified: $(cat .next/BUILD_ID)" || (echo "ERROR: BUILD_ID not found" && ls -la .next/ 2>/dev/null && exit 1)
+RUN test -f .next/BUILD_ID && echo "BUILD_ID verified: $(cat .next/BUILD_ID)" || (echo "ERROR: BUILD_ID not found" && echo "=== Contents of .next ===" && ls -la .next/ 2>/dev/null && exit 1)
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
