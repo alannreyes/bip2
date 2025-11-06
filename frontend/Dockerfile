@@ -17,29 +17,29 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Código fuente
 COPY . .
 
-# Build con verificación y captura de errores
-RUN set -e; \
-    echo "=== Starting Next.js build ==="; \
-    echo "=== Node version ==="; \
-    node --version; \
-    echo "=== NPM version ==="; \
-    npm --version || echo "NPM not found"; \
-    echo "=== Next.js version ==="; \
-    npm list next || echo "Next.js not in package.json"; \
-    echo "=== Running build ==="; \
-    echo "=== Checking if next is available ==="; \
-    npx next --version || echo "next not found in PATH"; \
-    echo "=== Executing build ==="; \
-    npx next build 2>&1 || BUILD_EXIT=$?; \
-    if [ -n "$BUILD_EXIT" ]; then \
-      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
-      echo "=== Checking if .next directory exists ==="; \
-      ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
+# Build con verificación y captura de errores (sin set -e para mejor control)
+RUN echo "=== Starting Next.js build ===" && \
+    echo "=== Node version ===" && \
+    node --version && \
+    echo "=== NPM version ===" && \
+    npm --version && \
+    echo "=== Checking Next.js ===" && \
+    (npm list next 2>/dev/null || echo "Next.js checking...") && \
+    echo "=== Executing build ===" && \
+    npm run build 2>&1 | tee /tmp/build.log && \
+    BUILD_EXIT=${PIPESTATUS[0]} && \
+    if [ "$BUILD_EXIT" -ne 0 ]; then \
+      echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ===" && \
+      echo "=== Full build log ===" && \
+      cat /tmp/build.log && \
+      echo "=== Checking .next directory ===" && \
+      ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && \
       exit $BUILD_EXIT; \
-    fi; \
-    echo "=== Build completed successfully ==="; \
-    echo "=== Verifying build output ==="; \
-    ls -la .next/ 2>/dev/null || (echo "ERROR: .next directory not found after build" && exit 1)
+    fi && \
+    echo "=== Build completed successfully ===" && \
+    echo "=== Verifying build output ===" && \
+    ls -la .next/ 2>/dev/null && \
+    echo "=== Build verification complete ==="
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
