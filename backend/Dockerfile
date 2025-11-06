@@ -38,9 +38,9 @@ RUN echo "=== Pre-build verification ===" && \
     echo "Node modules bin:" && ls -la node_modules/.bin/ | grep -E "(nest|tsc)" || echo "No build tools found" && \
     echo "Package.json scripts:" && cat package.json | grep -A 2 '"build"'
 
-# Build application - try multiple methods
+# Build application with full error output
 RUN echo "=== Starting build ===" && \
-    npm run build 2>&1
+    (npm run build 2>&1 || (echo "=== BUILD FAILED - Showing error ===" && exit 1))
 
 # Verify build output exists
 RUN test -d dist && test -f dist/main.js || (echo "ERROR: Build output not found" && exit 1)
