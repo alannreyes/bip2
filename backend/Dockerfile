@@ -1,40 +1,55 @@
-# Stage 1: Builder (sin apt/apk; usa toolchain de node:20)
-FROM node:20 AS builder
+# Stage 1: Builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Asegura que los binarios de node_modules/.bin estén en PATH
-ENV PATH=/app/node_modules/.bin:$PATH
+# Install build dependencies (needed for some native modules)
+RUN apk add --no-cache python3 make g++
+
+# Ensure NODE_ENV is not production to install devDependencies
 ENV NODE_ENV=development
 
-# Instala dependencias (dev incluidas para compilar)
+# Copy package files first (for better layer caching)
 COPY package*.json ./
-RUN npm ci || npm install --legacy-peer-deps
+COPY nest-cli.json ./
+COPY tsconfig.json ./
 
-# Copia el resto del código (tsconfig.json, nest-cli.json, src/, etc.)
-COPY . .
+# Install all dependencies (including devDependencies for build)
+RUN npm install --legacy-peer-deps
 
-# Diagnóstico y build de NestJS
-# 1) Ver versiones
+# Verify npm and node are available
 RUN node --version && npm --version
-# 2) Confirma que 'nest' esté disponible o usa fallback explícito
-RUN (nest --version || node node_modules/.bin/nest --version)
-# 3) Build (primero por PATH; si falla, usa la ruta explícita)
-RUN (nest build || node node_modules/.bin/nest build)
 
-# Deja sólo dependencias de producción para runtime
-RUN npm prune --omit=dev
+# Verify nest CLI is installed
+RUN test -f node_modules/.bin/nest || (echo "ERROR: nest CLI not found after npm install" && npm list @nestjs/cli && exit 1)
 
-# Stage 2: Runtime (ligero, sin toolchain)
-FROM node:20-slim AS runner
+# Copy source code
+COPY src ./src
+
+# Build application - use explicit path to nest CLI
+RUN node_modules/.bin/nest build || npm run build || (echo "Build failed" && exit 1)
+
+# Verify build output exists
+RUN test -d dist && test -f dist/main.js || (echo "ERROR: Build output not found" && exit 1)
+
+# Stage 2: Production
+FROM node:20-alpine
 
 WORKDIR /app
-ENV NODE_ENV=production
 
-# Copia node_modules ya “podados”, package.json y la app compilada
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
+# Copy package files
+COPY package*.json ./
+COPY nest-cli.json ./
+COPY tsconfig.json ./
+
+# Install only production dependencies
+RUN npm ci --only-production || npm install --only=production --legacy-peer-deps
+
+# Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
+# Expose port
 EXPOSE 3001
+
+# Start application
 CMD ["node", "dist/main.js"]
