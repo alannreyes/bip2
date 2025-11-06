@@ -18,17 +18,17 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 COPY . .
 
 # Build application - capture full error output (mismo patrón que backend)
-RUN set -e; \
-    echo "=== Starting build process ==="; \
-    echo "=== Node version ==="; \
-    node --version; \
-    echo "=== NPM version ==="; \
-    npm --version; \
-    echo "=== Checking Next.js ==="; \
-    (npm list next || echo "Next.js not found in package.json") || true; \
-    echo "=== Attempting npm run build ==="; \
-    NODE_OPTIONS='--max-old-space-size=4096' npm run build 2>&1 | tee /tmp/build.log || BUILD_EXIT=$?; \
-    if [ -n "$BUILD_EXIT" ]; then \
+RUN echo "=== Starting build process ===" && \
+    echo "=== Node version ===" && \
+    node --version && \
+    echo "=== NPM version ===" && \
+    npm --version && \
+    echo "=== Checking Next.js ===" && \
+    (npm list next || echo "Next.js not found in package.json") || true && \
+    echo "=== Attempting npm run build ===" && \
+    NODE_OPTIONS='--max-old-space-size=4096' npm run build 2>&1 | tee /tmp/build.log; \
+    BUILD_EXIT=${PIPESTATUS[0]}; \
+    if [ "$BUILD_EXIT" -ne 0 ]; then \
       echo "=== BUILD FAILED WITH EXIT CODE: $BUILD_EXIT ==="; \
       echo "=== Full build log ==="; \
       cat /tmp/build.log; \
