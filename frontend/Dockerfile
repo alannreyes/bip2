@@ -45,10 +45,19 @@ RUN set -e; \
       echo "=== Checking if .next directory exists ==="; \
       ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
       exit $BUILD_EXIT; \
+    fi; \
+    echo "=== Build completed, verifying BUILD_ID ==="; \
+    if [ -f .next/BUILD_ID ]; then \
+      echo "BUILD_ID found: $(cat .next/BUILD_ID)"; \
+    else \
+      echo "ERROR: BUILD_ID not found after build"; \
+      echo "Contents of .next:"; \
+      ls -la .next/ 2>/dev/null || echo ".next directory does not exist"; \
+      exit 1; \
     fi
 
-# Verify build output exists (igual que backend)
-RUN test -d .next && echo "Build output verified" || (echo "ERROR: .next directory not found after build" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && exit 1)
+# Verify build output exists - Next.js requires BUILD_ID file
+RUN test -d .next && test -f .next/BUILD_ID && echo "Build output verified with BUILD_ID" || (echo "ERROR: .next directory or BUILD_ID not found after build" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && exit 1)
 
 # Stage 2: Runtime (modo completo - más robusto)
 FROM node:20-slim AS runner
@@ -61,6 +70,9 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+
+# Verificar que BUILD_ID existe después de copiar
+RUN test -f .next/BUILD_ID && echo "BUILD_ID verified in runtime stage" || (echo "ERROR: BUILD_ID not found after copy" && ls -la .next/ 2>/dev/null || echo ".next directory does not exist" && exit 1)
 
 # Permisos para el usuario 'node'
 RUN chown -R node:node /app
