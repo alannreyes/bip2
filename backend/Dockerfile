@@ -1,10 +1,8 @@
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+# Use node:20 (Debian-based) instead of alpine for better compatibility with native modules
+FROM node:20 AS builder
 
 WORKDIR /app
-
-# Install build dependencies (needed for some native modules)
-RUN apk add --no-cache python3 make g++
 
 # Ensure NODE_ENV is not production to install devDependencies
 ENV NODE_ENV=development
