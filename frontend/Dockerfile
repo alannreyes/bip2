@@ -50,7 +50,12 @@ RUN if [ -d .next ]; then \
       echo "=== Listing current directory ==="; \
       ls -la; \
       echo "=== Checking if build actually ran ==="; \
-      test -f /tmp/build.log && (echo "Build log exists, showing last 50 lines:" && tail -50 /tmp/build.log) || echo "No build log found"; \
+      if [ -f /tmp/build.log ]; then \
+        echo "Build log exists, showing last 50 lines:"; \
+        tail -50 /tmp/build.log; \
+      else \
+        echo "No build log found"; \
+      fi; \
       exit 1; \
     fi
 
