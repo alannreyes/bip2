@@ -23,9 +23,13 @@ RUN npm install sharp --save-optional || echo "Warning: sharp installation faile
 # Copy source code and config files
 COPY . .
 
-# Build application - SIMPLIFIED to see actual errors
+# Build application - show full error output
 RUN echo "Building Next.js application..." && \
-    NODE_OPTIONS='--max-old-space-size=6144' npm run build
+    (NODE_OPTIONS='--max-old-space-size=6144' npm run build 2>&1) || \
+    (echo "=== BUILD FAILED ===" && \
+     echo "=== Running build again to show full error ===" && \
+     NODE_OPTIONS='--max-old-space-size=6144' npm run build && \
+     exit 1)
 
 # Stage 2: Runtime (modo completo - más simple y confiable)
 FROM node:20-slim AS runner
