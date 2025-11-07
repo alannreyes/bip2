@@ -6,15 +6,16 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export class GeminiEmbeddingService {
   private readonly logger = new Logger(GeminiEmbeddingService.name);
   private readonly genAI: GoogleGenerativeAI;
+  private readonly apiKey: string;
   private readonly embeddingModel: string = 'gemini-embedding-001';
   private readonly visionModel: string = 'gemini-2.0-flash-exp';
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get('GEMINI_API_KEY');
-    if (!apiKey) {
+    this.apiKey = this.configService.get('GEMINI_API_KEY');
+    if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY is not configured');
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.genAI = new GoogleGenerativeAI(this.apiKey);
     this.logger.log('Gemini AI initialized with gemini-embedding-001 (3072 dims)');
   }
 
@@ -51,27 +52,108 @@ export class GeminiEmbeddingService {
         return [];
       }
 
-      // Gemini API supports batch processing
-      // Process in chunks of 100 (API limit)
-      const chunkSize = 100;
+      // Use direct fetch API instead of library for more reliable batch processing
       const embeddings: number[][] = [];
+      const chunkSize = 5; // Very small batches to avoid overwhelming the API
 
       for (let i = 0; i < validTexts.length; i += chunkSize) {
         const chunk = validTexts.slice(i, i + chunkSize);
 
-        const model = this.genAI.getGenerativeModel({ model: this.embeddingModel });
+        // Process each text with retry logic
+        for (const text of chunk) {
+          let embedding: number[] | null = null;
+          const maxRetries = 5; // More retries for connection issues
+          let lastError: Error | null = null;
 
-        // Process batch
-        const promises = chunk.map((text) => model.embedContent(text));
-        const results = await Promise.all(promises);
+          for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+              // Sanitize and validate text
+              const cleanText = text.trim();
+              if (!cleanText) {
+                this.logger.warn(`Empty text after trim, skipping`);
+                break;
+              }
 
-        results.forEach((result) => {
-          if (result.embedding && result.embedding.values) {
-            embeddings.push(result.embedding.values);
+              const debugAttempt = attempt > 0 ? ` (attempt ${attempt + 1}/${maxRetries})` : '';
+              this.logger.debug(`Embedding text (${cleanText.length} chars)${debugAttempt}: ${cleanText.substring(0, 50)}...`);
+
+              const payload = {
+                model: 'models/gemini-embedding-001',
+                content: {
+                  parts: [{ text: cleanText }],
+                },
+              };
+
+              const bodyStr = JSON.stringify(payload);
+
+              const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${this.apiKey}`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Accept': 'application/json',
+                    'User-Agent': 'BIP2-Backend/1.0',
+                  },
+                  body: bodyStr,
+                  timeout: 30000, // 30 second timeout
+                }
+              );
+
+              this.logger.debug(`Response status: ${response.status}${debugAttempt ? ` ${debugAttempt}` : ''}`);
+
+              if (!response.ok) {
+                const errorData = await response.text();
+                lastError = new Error(`API returned ${response.status}: ${errorData.substring(0, 200)}`);
+
+                // Retry on 400/429/503/504 errors (rate limit, temporary server issues, etc)
+                if ((response.status === 400 || response.status === 429 || response.status === 503 || response.status === 504) && attempt < maxRetries - 1) {
+                  const backoffDelay = Math.pow(2, attempt + 2) * 1000; // 4s, 8s, 16s, 32s exponential backoff
+                  this.logger.warn(`Rate limit or server error (${response.status}), retrying in ${backoffDelay}ms (attempt ${attempt + 1}/${maxRetries})...`);
+                  await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                  continue;
+                }
+
+                throw lastError;
+              }
+
+              const data = await response.json();
+
+              if (data.embedding && data.embedding.values) {
+                embedding = data.embedding.values;
+                embeddings.push(embedding);
+                break; // Success, exit retry loop
+              } else {
+                this.logger.warn(`No embedding returned for text: ${cleanText.substring(0, 50)}...`);
+                break;
+              }
+            } catch (textError) {
+              lastError = textError as Error;
+              if (attempt < maxRetries - 1) {
+                // Longer exponential backoff for connection errors
+                const backoffDelay = Math.pow(2, attempt + 2) * 1000; // 4s, 8s, 16s, 32s, 64s
+                this.logger.warn(`Connection/parse error on attempt ${attempt + 1}/${maxRetries}, retrying in ${backoffDelay}ms: ${lastError.message}`);
+                await new Promise(resolve => setTimeout(resolve, backoffDelay));
+              }
+            }
           }
-        });
 
-        this.logger.debug(`Processed ${chunk.length} embeddings (${i + chunk.length}/${validTexts.length})`);
+          if (!embedding && lastError) {
+            this.logger.error(`Failed to embed text after ${maxRetries} attempts: ${lastError.message}`);
+            throw lastError;
+          }
+
+          // Delay between requests (configurable via environment variable)
+          // Default: 600ms = ~100 reqs/minute max (safe for free tier)
+          // Can be adjusted based on API quotas and rate limits
+          const delayBetweenRequests = parseInt(
+            process.env.GEMINI_EMBEDDING_DELAY_MS || '600',
+            10,
+          );
+          await new Promise(resolve => setTimeout(resolve, delayBetweenRequests));
+        }
+
+        this.logger.debug(`Processed batch ${Math.floor(i / chunkSize) + 1} (${i + chunk.length}/${validTexts.length})`);
       }
 
       return embeddings;
@@ -578,7 +660,7 @@ IMPORTANTE:
       const { GoogleGenAI } = await import('@google/genai');
 
       // Initialize the new Google Gen AI client
-      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const aiClient = new GoogleGenAI({ apiKey: this.apiKey });
 
       // Configure Google Search Grounding tool
       const groundingTool = {
@@ -697,7 +779,7 @@ IMPORTANTE:
       const { GoogleGenAI } = await import('@google/genai');
 
       // Initialize the new Google Gen AI client
-      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const aiClient = new GoogleGenAI({ apiKey: this.apiKey });
 
       // Configure Google Search Grounding tool
       const groundingTool = {
@@ -802,7 +884,7 @@ IMPORTANTE:
       const { GoogleGenAI } = await import('@google/genai');
 
       // Initialize the new Google Gen AI client
-      const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const aiClient = new GoogleGenAI({ apiKey: this.apiKey });
 
       // Configure Google Search Grounding tool
       const groundingTool = {

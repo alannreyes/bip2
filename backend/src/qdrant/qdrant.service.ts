@@ -219,6 +219,46 @@ export class QdrantService {
 
       this.logger.debug(`Upserted ${points.length} points to ${collectionName}`);
     } catch (error) {
+      // Check if error is "collection not found" and try to create it
+      const errorMsg = error.message || error.data?.status?.error || '';
+      if (errorMsg.includes('doesn\'t exist') || errorMsg.includes('not found') || errorMsg.includes('Not Found')) {
+        this.logger.warn(`Collection ${collectionName} not found, creating it automatically...`);
+
+        try {
+          const client = this.getClientForDatasource(qdrantHost, qdrantPort);
+
+          // Create collection with default settings (3072-dim vectors for Gemini embeddings)
+          await client.createCollection(collectionName, {
+            vectors: {
+              size: 3072,
+              distance: 'Cosine',
+            },
+            optimizers_config: {
+              indexing_threshold: 20000,
+            },
+            hnsw_config: {
+              m: 16,
+              ef_construct: 100,
+            },
+          });
+
+          this.logger.log(`Auto-created Qdrant collection: ${collectionName}`);
+
+          // Retry upserting points
+          await client.upsert(collectionName, {
+            wait: true,
+            points,
+          });
+
+          this.logger.debug(`Upserted ${points.length} points to ${collectionName} after creating collection`);
+          return; // Success!
+        } catch (createError) {
+          this.logger.error(`Failed to auto-create collection ${collectionName}: ${createError.message}`);
+          throw new BadRequestException(`Failed to create collection: ${createError.message}`);
+        }
+      }
+
+      // If not a "not found" error, log and throw original error
       this.logger.error(`Failed to upsert points to ${collectionName}: ${error.message}`);
 
       // Log detailed error information

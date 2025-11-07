@@ -18,20 +18,25 @@ export class SchedulerService {
   ) {}
 
   async onModuleInit() {
-    await this.initializeScheduledSyncs();
+    try {
+      await this.initializeScheduledSyncs();
+    } catch (error) {
+      this.logger.warn(`Failed to initialize scheduled syncs on startup: ${error.message}. Will retry when database is ready.`);
+    }
   }
 
   /**
    * Initialize all scheduled syncs from database
    */
   async initializeScheduledSyncs() {
-    this.logger.log('Initializing scheduled syncs...');
+    try {
+      this.logger.log('Initializing scheduled syncs...');
 
-    const datasources = await this.datasourceRepository.find({
-      where: {
-        status: 'active',
-      },
-    });
+      const datasources = await this.datasourceRepository.find({
+        where: {
+          status: 'active',
+        },
+      });
 
     for (const datasource of datasources) {
       if (datasource.syncSchedule) {
@@ -48,7 +53,10 @@ export class SchedulerService {
       }
     }
 
-    this.logger.log('Scheduled syncs initialized');
+      this.logger.log('Scheduled syncs initialized');
+    } catch (error) {
+      this.logger.warn(`Error during scheduled syncs initialization: ${error.message}`);
+    }
   }
 
   /**
