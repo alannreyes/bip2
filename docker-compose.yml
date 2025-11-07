@@ -74,6 +74,8 @@ services:
     container_name: bip2-qa-backend
     ports:
       - "3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -90,22 +92,22 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      
+
       # Qdrant
       QDRANT_HOST: ${QDRANT_HOST:-qdrant}
       QDRANT_PORT: ${QDRANT_PORT:-6333}
       QDRANT_API_KEY: ${QDRANT_API_KEY:-}
-      
+
       # Gemini API
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      
+
       # CORS
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3011,http://frontend:3000}
-      
+
       # JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 7d
-      
+
       # Azure AD - NO CONFIGURADO
       AZURE_AD_CLIENT_ID: ""
       AZURE_AD_CLIENT_SECRET: ""

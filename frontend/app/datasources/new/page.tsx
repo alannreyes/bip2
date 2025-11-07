@@ -116,6 +116,7 @@ export default function NewDatasourcePage() {
 
   const handlePreviewQuery = async () => {
     setIsPreviewing(true);
+    let datasourceId: string | null = null;
     try {
       // Create temporary datasource for preview
       const testData = {
@@ -130,22 +131,40 @@ export default function NewDatasourcePage() {
       };
 
       const response = await createMutation.mutateAsync(testData);
+      datasourceId = response.id;
 
       // Get preview
       const previewResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/datasources/${response.id}/preview?limit=5`
       );
+
+      if (!previewResponse.ok) {
+        const error = await previewResponse.json();
+        throw new Error(error.message || 'Error al obtener vista previa');
+      }
+
       const preview = await previewResponse.json();
 
-      // Delete the test datasource
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/datasources/${response.id}`, {
-        method: 'DELETE',
-      });
+      // Validate preview data structure
+      if (!preview.columns || !preview.rows || !Array.isArray(preview.columns) || !Array.isArray(preview.rows)) {
+        throw new Error('Datos de vista previa inválidos');
+      }
 
       setPreviewData(preview);
     } catch (error: any) {
       alert(`Error al obtener vista previa: ${error.response?.data?.message || error.message}`);
+      setPreviewData(null);
     } finally {
+      // Delete the test datasource if it was created
+      if (datasourceId) {
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/datasources/${datasourceId}`, {
+            method: 'DELETE',
+          });
+        } catch (e) {
+          console.error('Error deleting test datasource:', e);
+        }
+      }
       setIsPreviewing(false);
     }
   };
