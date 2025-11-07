@@ -244,6 +244,22 @@ export class QdrantService {
 
           this.logger.log(`Auto-created Qdrant collection: ${collectionName}`);
 
+          // Register collection in PostgreSQL database
+          const existingCollection = await this.qdrantCollectionRepository.findOne({
+            where: { name: collectionName },
+          });
+
+          if (!existingCollection) {
+            const collection = this.qdrantCollectionRepository.create({
+              name: collectionName,
+              vectorSize: 3072,
+              distance: 'Cosine',
+              totalPoints: 0,
+            });
+            await this.qdrantCollectionRepository.save(collection);
+            this.logger.log(`Registered collection ${collectionName} in database`);
+          }
+
           // Retry upserting points
           await client.upsert(collectionName, {
             wait: true,
