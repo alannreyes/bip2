@@ -25,14 +25,67 @@ export class GeminiEmbeddingService {
         throw new Error('Text cannot be empty');
       }
 
-      const model = this.genAI.getGenerativeModel({ model: this.embeddingModel });
-      const result = await model.embedContent(text);
+      // Use direct fetch API for reliability (same as batch processing)
+      const cleanText = text.trim();
+      const payload = {
+        model: 'models/gemini-embedding-001',
+        content: {
+          parts: [{ text: cleanText }],
+        },
+      };
 
-      if (!result.embedding || !result.embedding.values) {
-        throw new Error('No embedding values returned from Gemini');
+      const maxRetries = 5;
+      let lastError: Error | null = null;
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${this.apiKey}`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Accept': 'application/json',
+                'User-Agent': 'BIP2-Backend/1.0',
+              },
+              body: JSON.stringify(payload),
+              signal: controller.signal,
+            }
+          );
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            if ((response.status === 400 || response.status === 429 || response.status === 503) && attempt < maxRetries - 1) {
+              const backoffDelay = Math.pow(2, attempt + 2) * 1000;
+              this.logger.warn(`Embedding failed (${response.status}), retrying in ${backoffDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+              continue;
+            }
+            const errorData = await response.text();
+            throw new Error(`Embedding failed with ${response.status}: ${errorData}`);
+          }
+
+          const data = await response.json();
+          if (!data.embedding || !data.embedding.values) {
+            throw new Error('No embedding values returned from Gemini');
+          }
+
+          return data.embedding.values;
+        } catch (fetchError) {
+          lastError = fetchError as Error;
+          if (attempt < maxRetries - 1) {
+            const backoffDelay = Math.pow(2, attempt + 2) * 1000;
+            this.logger.warn(`Embedding attempt ${attempt + 1} failed, retrying in ${backoffDelay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          }
+        }
       }
 
-      return result.embedding.values;
+      throw lastError || new Error('Failed to generate embedding after max retries');
     } catch (error) {
       this.logger.error(`Failed to generate embedding: ${error.message}`);
       throw new Error(`Gemini embedding failed: ${error.message}`);
@@ -86,6 +139,9 @@ export class GeminiEmbeddingService {
 
               const bodyStr = JSON.stringify(payload);
 
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 30000);
+
               const response = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${this.apiKey}`,
                 {
@@ -96,9 +152,11 @@ export class GeminiEmbeddingService {
                     'User-Agent': 'BIP2-Backend/1.0',
                   },
                   body: bodyStr,
-                  timeout: 30000, // 30 second timeout
+                  signal: controller.signal,
                 }
               );
+
+              clearTimeout(timeoutId);
 
               this.logger.debug(`Response status: ${response.status}${debugAttempt ? ` ${debugAttempt}` : ''}`);
 
