@@ -53,3 +53,10 @@ secrets/
 *.pem
 *.key
 *.crt
+
+# Data directories (bind mounts for Docker volumes)
+# These are stored locally and should NOT be in version control
+data/
+data/postgres/
+data/redis/
+data/qdrant/
