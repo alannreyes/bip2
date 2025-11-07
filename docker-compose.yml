@@ -99,7 +99,7 @@ services:
       QDRANT_API_KEY: dev-key-12345
 
       # Gemini API
-      GEMINI_API_KEY: AIzaSyByPuyPZ-9s9FeDHE8v5lOH5zMIcLDLZt4
+      GEMINI_API_KEY: AIzaSyBpRQ0BNTEZBBfu_OeZgNPmbKiBK3gevbk
 
       # CORS - permitir localhost, docker internal, y red 192.168.18.*
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3011,http://127.0.0.1:3011,http://frontend:3000,http://192.168.18.174:3011,http://192.168.18.97:3011}
