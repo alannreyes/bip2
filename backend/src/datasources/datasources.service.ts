@@ -226,7 +226,11 @@ export class DatasourcesService {
       .replace(/FETCH NEXT[\s\S]*?ROWS ONLY/gi, '')
       .trim();
 
-    // Check if query has CTE (starts with WITH)
+    // Remove USE database statements (they can't be in subqueries)
+    // This handles: USE database_name; WITH ... or USE database_name; SELECT ...
+    cleanedQuery = cleanedQuery.replace(/^\s*USE\s+[^\s;]+\s*;\s*/i, '').trim();
+
+    // Check if query has CTE (starts with WITH, possibly after USE removal)
     if (/^\s*WITH\s+/i.test(cleanedQuery)) {
       // For CTEs in MSSQL, we cannot wrap the entire query in a subquery
       // because WITH must be the first statement. Instead, we need to find
