@@ -101,8 +101,8 @@ services:
       # Gemini API
       GEMINI_API_KEY: AIzaSyByPuyPZ-9s9FeDHE8v5lOH5zMIcLDLZt4
 
-      # CORS
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3011,http://frontend:3000}
+      # CORS - permitir localhost, docker internal, y red 192.168.18.*
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3011,http://127.0.0.1:3011,http://frontend:3000,http://192.168.18.174:3011,http://192.168.18.97:3011}
 
       # JWT
       JWT_SECRET: ${JWT_SECRET}

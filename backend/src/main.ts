@@ -23,14 +23,16 @@ async function bootstrap() {
     }),
   );
 
-  // CORS - Allow multiple origins for local development
+  // CORS - Allow multiple origins for local development and remote access
+  const corsOriginsEnv = configService.get('CORS_ORIGIN');
   const corsOrigins = [
     'http://localhost:3000',
     'http://localhost:3002',
     'http://localhost:3003',
     'http://localhost:3004',
     'http://localhost:3011',
-    configService.get('CORS_ORIGIN'),
+    'http://127.0.0.1:3011',
+    ...(corsOriginsEnv ? corsOriginsEnv.split(',').map(origin => origin.trim()) : []),
   ].filter(Boolean);
 
   app.enableCors({
