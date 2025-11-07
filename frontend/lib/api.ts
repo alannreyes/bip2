@@ -1,12 +1,35 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+/**
+ * Get the API base URL dynamically at runtime.
+ * Always uses the current hostname in the browser.
+ * This ensures the frontend works from any IP/hostname without requiring a rebuild.
+ */
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:3001/api`;
+  }
+  // Fallback for server-side rendering
+  return 'http://localhost:3001/api';
+}
 
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: 'http://localhost:3001/api', // Temporary fallback
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Override baseURL on first request to use runtime hostname
+let baseUrlSet = false;
+api.interceptors.request.use((config) => {
+  if (!baseUrlSet) {
+    api.defaults.baseURL = getApiBaseUrl();
+    baseUrlSet = true;
+  }
+  return config;
 });
 
 // Datasources API

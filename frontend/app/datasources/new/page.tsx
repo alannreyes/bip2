@@ -8,6 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Database, ChevronLeft, ChevronRight, Check, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
+// Helper function to get API URL dynamically based on current hostname
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:3001/api`;
+  }
+  return 'http://localhost:3001/api';
+}
+
 type DatasourceType = 'mssql' | 'mysql' | 'postgresql';
 
 interface FormData {
@@ -88,7 +98,7 @@ export default function NewDatasourcePage() {
     setIsTestingConnection(true);
     try {
       // Use the test-connection endpoint directly
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/datasources/test-connection`, {
+      const response = await fetch(`${getApiBaseUrl()}/datasources/test-connection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +145,7 @@ export default function NewDatasourcePage() {
 
       // Get preview
       const previewResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/datasources/${response.id}/preview?limit=5`
+        `${getApiBaseUrl()}/datasources/${response.id}/preview?limit=5`
       );
 
       if (!previewResponse.ok) {
@@ -158,7 +168,7 @@ export default function NewDatasourcePage() {
       // Delete the test datasource if it was created
       if (datasourceId) {
         try {
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/datasources/${datasourceId}`, {
+          await fetch(`${getApiBaseUrl()}/datasources/${datasourceId}`, {
             method: 'DELETE',
           });
         } catch (e) {

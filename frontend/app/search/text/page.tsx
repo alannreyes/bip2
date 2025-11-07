@@ -73,8 +73,13 @@ export default function TextSearchPage() {
     setInternetProgress('Conectando...');
     setInternetError('');
 
+    // Build dynamic API URL based on current hostname
+    const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+    const apiUrl = `${protocol}//${hostname}:3001/api`;
+
     const eventSource = new EventSource(
-      `http://localhost:3001/api/search/internet?query=${encodeURIComponent(searchQuery)}&collections=${collections.join(',')}`
+      `${apiUrl}/search/internet?query=${encodeURIComponent(searchQuery)}&collections=${collections.join(',')}`
     );
 
     eventSource.onmessage = (event) => {
