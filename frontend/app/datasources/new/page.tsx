@@ -553,7 +553,22 @@ FETCH NEXT {{limit}} ROWS ONLY`}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Mapeo de Campos</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium">Mapeo de Campos</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newMapping: Record<string, string> = {};
+                          previewData.columns.forEach((col: string) => {
+                            newMapping[col] = col;
+                          });
+                          updateFormData({ fieldMapping: newMapping });
+                        }}
+                        className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        ↻ Usar los mismos campos
+                      </button>
+                    </div>
                     <div className="text-sm text-muted-foreground mb-3">
                       Define cómo se almacenarán los campos en Qdrant
                     </div>
