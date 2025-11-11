@@ -226,7 +226,66 @@
 
 ---
 
-## 📋 PENDIENTE (40% de FASE 1)
+## � BUGS CRÍTICOS & BACKLOG
+
+### **CRÍTICO - SYNC JOB STATUS BUG** 🔴
+**Detectado:** 2025-11-10  
+**Descripción:** Jobs de sincronización continúan procesando después de ser marcados como "failed" en la API  
+**Impacto:** Alto - Imposible monitorear progreso real  
+**Estado:** Sin procesar por falta de acceso al backend  
+
+**Evidencia:**
+- Job ID: `d8950e43-4b35-418d-a140-5bd0a36b79c6`
+- Estado API: `"status": "failed"`  
+- Procesando realmente: 18,100+ registros y contando
+- Progreso real: ~9% de 202,910 productos
+
+**Causa probable:** Desincronización entre Bull Queue processor y actualización de DB  
+**Solución requerida:** 
+1. Investigar por qué `syncService.updateJobStatus()` no funciona correctamente
+2. Implementar heartbeat/health check para jobs zombie
+3. Agregar endpoint para forzar actualización de estado
+4. Mejorar logging del procesador Bull Queue
+
+**Workaround temporal:** Monitorear job `d8950e43...` para ver progreso real  
+**Prioridad:** P0 - Bloquea producción
+
+**📊 UPDATE 2025-11-11:** Job zombie llegó a 51,000 registros (25%) y se estancó
+
+---
+
+### **✅ SOLUCIONADO - SYNC NO RESUMABILITY** 🟢
+**Fecha:** 2025-11-11  
+**Problema:** Full sync jobs no pueden resumirse tras fallos/restart  
+**Impacto:** 51,000 registros perdidos, $15-25 USD costos Gemini API  
+**Solución:** Implementada "Detección Inteligente de Restart" (Opción 2)
+
+**Archivos modificados:**
+- `backend/src/sync/sync.service.ts` - Método `checkIfJobShouldResume()`
+- `backend/src/sync/processors/full-sync.processor.ts` - Smart resume logic  
+
+**Beneficios:**
+- ✅ Resume automático desde último batch completado
+- ✅ Logs detallados de ahorro de costos
+- ✅ Cero cambios en BD, usa datos existentes
+- ✅ Backward compatible
+
+**Estado:** 🚀 **CÓDIGO LISTO** - Pendiente deploy por administrador  
+**Deploy:** Ver `DEPLOY_INSTRUCTIONS_SMART_RESUME.md`
+
+---
+
+### **ENHANCEMENT - OPTIMIZACIÓN SYNC** 🟡
+**Descripción:** Mejorar configuración para sync de 202K productos  
+**Propuestas:**
+- Reducir batchSize de 100 a 50
+- Aumentar timeout de 30min a 2 horas  
+- Implementar sync incremental automático
+- Dashboard de progreso en tiempo real
+
+---
+
+## �📋 PENDIENTE (40% de FASE 1)
 
 ### Backend Restante:
 

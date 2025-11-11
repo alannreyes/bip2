@@ -33,7 +33,18 @@ export class FullSyncProcessor {
     this.logger.log(`Starting full sync job: ${jobId}`);
 
     try {
-      // Update job status to running
+      // 🧠 SMART RESUME: Detectar si debemos reanudar desde un punto anterior
+      const resumeInfo = await this.syncService.checkIfJobShouldResume(jobId);
+      
+      if (resumeInfo.shouldResume) {
+        this.logger.log(`🎯 SMART RESUME ACTIVATED: Resuming from record ${resumeInfo.lastOffset}`);
+        this.logger.log(`💰 COST SAVINGS: Avoiding reprocessing of ${resumeInfo.stats.estimatedRecordsSaved} records`);
+        this.logger.log(`📊 PROGRESS: ${resumeInfo.stats.progressPercent}% already completed`);
+      } else {
+        this.logger.log(`🆕 NEW SYNC: Starting from beginning - ${resumeInfo.stats.reason}`);
+      }
+
+      // Update job status to running (but preserve existing progress if resuming)
       await this.syncService.updateJobStatus(jobId, 'running');
 
       // Get datasource configuration
@@ -51,8 +62,16 @@ export class FullSyncProcessor {
       // Process in batches
       const batchSize = 100;
       const totalBatches = Math.ceil(totalCount / batchSize);
+      
+      // 🔄 RESUME: Calcular desde qué batch empezar
+      const startBatchIndex = Math.floor(resumeInfo.lastOffset / batchSize);
+      
+      if (resumeInfo.shouldResume) {
+        this.logger.log(`📈 RESUME DETAILS: Starting from batch ${startBatchIndex + 1}/${totalBatches} (offset: ${resumeInfo.lastOffset})`);
+        this.logger.log(`⏭️  SKIPPING: ${startBatchIndex} batches (${resumeInfo.lastOffset} records) already processed`);
+      }
 
-      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      for (let batchIndex = startBatchIndex; batchIndex < totalBatches; batchIndex++) {
         const offset = batchIndex * batchSize;
 
         this.logger.debug(`Processing batch ${batchIndex + 1}/${totalBatches} (offset: ${offset})`);
@@ -76,7 +95,15 @@ export class FullSyncProcessor {
           await this.processBatch(jobId, datasource, rows);
 
           // Update progress
-          job.progress((batchIndex + 1) / totalBatches * 100);
+          const progressPercent = Math.round(((batchIndex + 1) / totalBatches) * 100);
+          job.progress(progressPercent);
+
+          // 📊 ENHANCED LOGGING: Log progress every 10 batches
+          if ((batchIndex + 1) % 10 === 0 || batchIndex === startBatchIndex) {
+            const recordsProcessed = (batchIndex + 1) * batchSize;
+            const recordsRemaining = totalCount - recordsProcessed;
+            this.logger.log(`🔄 BATCH PROGRESS: ${batchIndex + 1}/${totalBatches} (${progressPercent}%) - Processed: ${recordsProcessed}/${totalCount}, Remaining: ${recordsRemaining}`);
+          }
 
         } catch (error) {
           this.logger.error(`Batch ${batchIndex + 1} failed: ${error.message}`);

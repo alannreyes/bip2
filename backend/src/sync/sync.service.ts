@@ -291,4 +291,60 @@ export class SyncService {
 
     return result.affected || 0;
   }
+
+  /**
+   * 🧠 SMART RESUME: Detecta si un job debe resumirse basado en registros ya procesados
+   * Útil para recuperar sync jobs interrumpidos y evitar reprocesar registros costosos
+   */
+  async checkIfJobShouldResume(jobId: string): Promise<{ shouldResume: boolean, lastOffset: number, stats: any }> {
+    const job = await this.syncJobRepository.findOne({ where: { id: jobId } });
+    
+    if (!job) {
+      return { shouldResume: false, lastOffset: 0, stats: { error: 'Job not found' } };
+    }
+    
+    // Si ya tiene registros procesados pero status no es 'completed'
+    if (job.processedRecords > 0 && job.status !== 'completed') {
+      this.logger.log(`🔄 RESTART DETECTED: Job ${jobId} has ${job.processedRecords} processed records but status is '${job.status}'`);
+      
+      // Calcular último offset basado en registros procesados
+      // Usamos batch size de 100 (mismo que full-sync.processor.ts)
+      const batchSize = 100;
+      const lastCompleteBatch = Math.floor(job.processedRecords / batchSize);
+      const lastOffset = lastCompleteBatch * batchSize;
+      
+      const stats = {
+        processedRecords: job.processedRecords,
+        successfulRecords: job.successfulRecords,
+        failedRecords: job.failedRecords,
+        totalRecords: job.totalRecords,
+        progressPercent: job.totalRecords ? Math.round((job.processedRecords / job.totalRecords) * 100) : 0,
+        estimatedRecordsSaved: job.processedRecords,
+        lastCompleteBatch: lastCompleteBatch + 1, // +1 porque es 0-indexed
+      };
+      
+      this.logger.log(`📊 RESUME STATS: Will resume from batch ${lastCompleteBatch + 1}, offset ${lastOffset}. Saved processing ${job.processedRecords} records!`);
+      
+      return { shouldResume: true, lastOffset, stats };
+    }
+    
+    this.logger.log(`🆕 NEW SYNC: Job ${jobId} starting fresh (processedRecords: ${job.processedRecords}, status: ${job.status})`);
+    return { 
+      shouldResume: false, 
+      lastOffset: 0, 
+      stats: { 
+        processedRecords: job.processedRecords, 
+        status: job.status,
+        reason: 'No records to resume or job already completed'
+      } 
+    };
+  }
+
+  async getJob(jobId: string): Promise<SyncJob> {
+    const job = await this.syncJobRepository.findOne({ where: { id: jobId } });
+    if (!job) {
+      throw new NotFoundException(`Sync job with ID ${jobId} not found`);
+    }
+    return job;
+  }
 }

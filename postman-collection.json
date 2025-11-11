@@ -1,0 +1,1197 @@
+{
+  "info": {
+    "name": "BIP2 - Sistema de Búsqueda Inteligente de Productos",
+    "description": "Colección completa de endpoints para el sistema BIP2 con ejemplos basados en datos reales",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.40.197:3001/api",
+      "type": "string"
+    },
+    {
+      "key": "datasourceId",
+      "value": "catalogo_efc",
+      "type": "string"
+    },
+    {
+      "key": "collectionName", 
+      "value": "catalogo_efc",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Check",
+      "item": [
+        {
+          "name": "Health Check Completo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verificar el estado general del sistema"
+          }
+        },
+        {
+          "name": "Health Check Database",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/database",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "database"]
+            },
+            "description": "Verificar el estado de PostgreSQL"
+          }
+        },
+        {
+          "name": "Health Check Qdrant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/qdrant",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "qdrant"]
+            },
+            "description": "Verificar el estado de Qdrant Vector DB"
+          }
+        },
+        {
+          "name": "Health Check Redis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/redis",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "redis"]
+            },
+            "description": "Verificar el estado de Redis"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗄️ Datasources",
+      "item": [
+        {
+          "name": "Crear Datasource",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maestro de Articulos Principal de EFC\",\n  \"description\": \"Base de datos principal MSSQL con productos del catálogo EFC\",\n  \"type\": \"mssql\",\n  \"connectionConfig\": {\n    \"host\": \"192.168.40.251\",\n    \"port\": 1433,\n    \"user\": \"sa\",\n    \"password\": \"your-password\",\n    \"database\": \"EFC_DB_PROD\"\n  },\n  \"query\": \"SELECT Cliente, Codigo, Descripcion, Marca FROM productos WHERE Cliente IN ('000106', '000633', '003592', '004401')\",\n  \"syncEnabled\": true,\n  \"syncFrequency\": \"daily\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources"]
+            },
+            "description": "Crear una nueva fuente de datos con productos del catálogo"
+          }
+        },
+        {
+          "name": "Listar Todas las Datasources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources"]
+            },
+            "description": "Obtener todas las fuentes de datos configuradas"
+          }
+        },
+        {
+          "name": "Obtener Datasource por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}"]
+            },
+            "description": "Obtener detalles de la fuente de datos catalogo_efc"
+          }
+        },
+        {
+          "name": "Actualizar Datasource",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maestro de Articulos EFC Actualizado\",\n  \"description\": \"Base de datos MSSQL EFC_DB_PROD - versión actualizada\",\n  \"syncEnabled\": true,\n  \"syncFrequency\": \"0 2 * * *\",\n  \"query\": \"SELECT Cliente, Codigo, Descripcion, Marca FROM productos WHERE Cliente IN ('000106', '000633', '003592', '004401') AND activo = 1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}"]
+            },
+            "description": "Actualizar la fuente de datos catalogo_efc"
+          }
+        },
+        {
+          "name": "Eliminar Datasource",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123"]
+            },
+            "description": "Eliminar una fuente de datos"
+          }
+        },
+        {
+          "name": "Test Conexión Datasource",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123", "test"]
+            },
+            "description": "Probar la conexión de una fuente de datos"
+          }
+        },
+        {
+          "name": "Test Conexión sin Guardar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"mssql\",\n  \"connectionConfig\": {\n    \"host\": \"192.168.40.251\",\n    \"port\": 1433,\n    \"user\": \"sa\",\n    \"password\": \"your-password\",\n    \"database\": \"EFC_DB_PROD\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources/test-connection",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "test-connection"]
+            },
+            "description": "Probar una configuración de conexión antes de guardarla"
+          }
+        },
+        {
+          "name": "Preview de Datos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123/preview?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123", "preview"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Ver una muestra de los datos de la fuente"
+          }
+        },
+        {
+          "name": "Validar Query SQL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT Cliente, Codigo, Descripcion, Marca FROM productos WHERE Cliente = '000106' LIMIT 10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123/validate-query",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123", "validate-query"]
+            },
+            "description": "Validar una consulta SQL antes de ejecutarla"
+          }
+        },
+        {
+          "name": "Regenerar Webhook Secret",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123/regenerate-webhook-secret",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123", "regenerate-webhook-secret"]
+            },
+            "description": "Regenerar el secreto del webhook para sincronización"
+          }
+        },
+        {
+          "name": "Estadísticas de Datasource",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123", "stats"]
+            },
+            "description": "Obtener estadísticas de una fuente de datos"
+          }
+        },
+        {
+          "name": "Validar Query con IA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT Cliente, Codigo, Descripcion, Marca FROM productos WHERE Marca = 'HONEYWELL'\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123/validate-query-ai",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123", "validate-query-ai"]
+            },
+            "description": "Validar query SQL usando IA para optimizaciones"
+          }
+        },
+        {
+          "name": "Analizar Error con IA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"errorMessage\": \"Table 'catalogo.productos' doesn't exist\",\n  \"errorType\": \"sql\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123/analyze-error",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123", "analyze-error"]
+            },
+            "description": "Analizar errores usando IA para sugerir soluciones"
+          }
+        },
+        {
+          "name": "Preview con IA",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123/preview-with-ai?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123", "preview-with-ai"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Preview de datos con análisis inteligente usando IA"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗂️ Collections (Qdrant)",
+      "item": [
+        {
+          "name": "Crear Colección",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{collectionName}}\",\n  \"vectorSize\": 768,\n  \"distance\": \"Cosine\",\n  \"datasourceId\": \"{{datasourceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/collections",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections"]
+            },
+            "description": "Crear una nueva colección en Qdrant para almacenar vectores de productos"
+          }
+        },
+        {
+          "name": "Registrar Colección Existente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{collectionName}}\",\n  \"datasourceId\": \"{{datasourceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/collections/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "register"]
+            },
+            "description": "Registrar una colección que ya existe en Qdrant"
+          }
+        },
+        {
+          "name": "Listar Colecciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections"]
+            },
+            "description": "Obtener todas las colecciones disponibles en Qdrant"
+          }
+        },
+        {
+          "name": "Obtener Colección por Nombre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName}}"]
+            },
+            "description": "Obtener información de la colección catalogo_efc"
+          }
+        },
+        {
+          "name": "Info Detallada de Colección",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName}}/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName}}", "info"]
+            },
+            "description": "Obtener información detallada de catalogo_efc (4700 puntos totales)"
+          }
+        },
+        {
+          "name": "Eliminar Colección",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName}}"]
+            },
+            "description": "Eliminar la colección catalogo_efc de Qdrant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Sincronización",
+      "item": [
+        {
+          "name": "Sincronización Completa",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/full/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "full", "{{datasourceId}}"]
+            },
+            "description": "Realizar una sincronización completa de todos los productos del datasource"
+          }
+        },
+        {
+          "name": "Sincronización Incremental",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/incremental/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "incremental", "{{datasourceId}}"]
+            },
+            "description": "Realizar una sincronización incremental de productos modificados"
+          }
+        },
+        {
+          "name": "Listar Jobs de Sincronización",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs?status=running&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "running"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Obtener la lista de jobs de sincronización con filtros opcionales"
+          }
+        },
+        {
+          "name": "Obtener Job por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs/job-123-abc",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs", "job-123-abc"]
+            },
+            "description": "Obtener detalles de un job específico de sincronización"
+          }
+        },
+        {
+          "name": "Cancelar Job",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs/job-123-abc/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs", "job-123-abc", "cancel"]
+            },
+            "description": "Cancelar un job de sincronización en progreso"
+          }
+        },
+        {
+          "name": "Obtener Errores de Job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/errors/job-123-abc",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "errors", "job-123-abc"]
+            },
+            "description": "Obtener errores ocurridos durante un job de sincronización"
+          }
+        },
+        {
+          "name": "Reintentar Errores",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/errors/job-123-abc/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "errors", "job-123-abc", "retry"]
+            },
+            "description": "Reintentar procesar los elementos que fallaron en un job"
+          }
+        },
+        {
+          "name": "🚨 DIAGNÓSTICO - Jobs Bloqueados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs?status=running&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "running"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Ver jobs que están en estado 'running' - para detectar jobs bloqueados"
+          }
+        },
+        {
+          "name": "🚨 DIAGNÓSTICO - Cancelar Job Específico",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs/JOB_ID_AQUI/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs", "JOB_ID_AQUI", "cancel"]
+            },
+            "description": "Cancelar un job específico que esté bloqueado (reemplazar JOB_ID_AQUI)"
+          }
+        },
+        {
+          "name": "🔧 DIAGNÓSTICO - Estado Backend Redis/Qdrant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verificar que todos los servicios estén funcionando (Redis, Qdrant, DB)"
+          }
+        },
+        {
+          "name": "🔧 DIAGNÓSTICO - Test Conexión Datasource",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}", "test"]
+            },
+            "description": "Verificar que la conexión a MSSQL EFC_DB_PROD esté funcionando"
+          }
+        },
+        {
+          "name": "🔧 DIAGNÓSTICO - Preview Datos MSSQL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}/preview?limit=3",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}", "preview"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "3"
+                }
+              ]
+            },
+            "description": "Ver si puede obtener datos de la base MSSQL - 3 registros de prueba"
+          }
+        },
+        {
+          "name": "⚠️ REPORTE DE ISSUE - Jobs Pending Bloqueados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs?status=pending&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"],
+              "query": [
+                {
+                  "key": "status", 
+                  "value": "pending"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "🚨 ISSUE DETECTADO: Jobs se quedan en 'pending' indefinidamente. El procesador Bull Queue no está funcionando. SOLUCIÓN: Reiniciar backend service."
+          }
+        },
+        {
+          "name": "📊 INFO - Estado de Colección Qdrant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName}}/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName}}", "info"]
+            },
+            "description": "Ver cuántos vectores ya están indexados en Qdrant (actualmente 9,800 de ~202K productos)"
+          }
+        },
+        {
+          "name": "📈 ESTADÍSTICAS - Total de Productos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}/preview?limit=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}", "preview"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Ver el campo 'total' para confirmar que hay 202,912 productos en la base"
+          }
+        },
+        {
+          "name": "👻 MONITOR - Job Zombie (PROCESANDO REAL)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs/d8950e43-4b35-418d-a140-5bd0a36b79c6",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs", "d8950e43-4b35-418d-a140-5bd0a36b79c6"]
+            },
+            "description": "🔥 JOB ZOMBIE DETECTADO: Este job dice 'failed' pero SIGUE PROCESANDO! Actualmente 18,100+ registros (9% progreso). ¡MONITOREAR ESTE!"
+          }
+        },
+        {
+          "name": "🎯 PROGRESO REAL - Cálculo de Porcentaje",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs/d8950e43-4b35-418d-a140-5bd0a36b79c6",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs", "d8950e43-4b35-418d-a940-5bd0a36b79c6"]
+            },
+            "description": "CALCULAR: processedRecords ÷ 202910 × 100 = % progreso real. Este es el único job que avanza realmente."
+          }
+        },
+        {
+          "name": "📋 ISSUE #001 - Job Status Bug Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"]
+            },
+            "description": "🐛 BUG DOCUMENTADO: Issue #001 en ISSUES_BACKLOG.md - Jobs zombie siguen procesando después de marcarse como 'failed'. Prioridad P0. Requiere fix en syncService.updateJobStatus() y Bull Queue processor."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Búsqueda",
+      "item": [
+        {
+          "name": "Búsqueda por Texto - Todos los Clientes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes seguridad\",\n  \"collections\": [\"{{collectionName}}\"],\n  \"limit\": 10,\n  \"includeInternetSearch\": false,\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda de productos por texto sin filtrar por cliente"
+          }
+        },
+        {
+          "name": "Búsqueda por Texto - Cliente 000106",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes seguridad genesis\",\n  \"collections\": [\"{{collectionName}}\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\",\n  \"includeInternetSearch\": false,\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda específica para cliente 000106 que compró lentes HONEYWELL"
+          }
+        },
+        {
+          "name": "Búsqueda por Texto - Cliente 004401 Marca PILOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"boligrafo pilot negro\",\n  \"collections\": [\"{{collectionName}}\"],\n  \"limit\": 15,\n  \"cliente\": \"004401\",\n  \"marca\": \"PILOT\",\n  \"includeInternetSearch\": false,\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda para cliente 004401 que compró varios productos PILOT"
+          }
+        },
+        {
+          "name": "Búsqueda por Texto - Marca LOCTITE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"adhesivo super bonder\",\n  \"collections\": [\"{{collectionName}}\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\",\n  \"includeInternetSearch\": true,\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda por marca LOCTITE con búsqueda en internet habilitada"
+          }
+        },
+        {
+          "name": "Búsqueda por Imagen",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/image?collection={{collectionName}}&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "image"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collectionName}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Búsqueda de productos similares subiendo una imagen"
+          }
+        },
+        {
+          "name": "Recomendaciones - Basado en HONEYWELL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"positiveIds\": [\"41010584\", \"41092033\"],\n  \"negativeIds\": [],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/recommend",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommend"]
+            },
+            "description": "Recomendar productos similares basado en lentes y barra HONEYWELL del cliente 000106"
+          }
+        },
+        {
+          "name": "Recomendaciones - Basado en PILOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"positiveIds\": [\"A0011920\", \"26021134\"],\n  \"negativeIds\": [\"26020017\"],\n  \"limit\": 8\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/recommend",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommend"]
+            },
+            "description": "Recomendar productos PILOT pero excluyendo lápices (cliente 004401)"
+          }
+        },
+        {
+          "name": "Búsqueda Vectorial Raw",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"papel fotocopia\",\n  \"collections\": [\"{{collectionName}}\"],\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/raw-vectorial",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "raw-vectorial"]
+            },
+            "description": "Obtener resultados vectoriales sin procesar para análisis avanzado"
+          }
+        },
+        {
+          "name": "Búsqueda con Internet - Cliente 003592",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/search/internet?query=adhesivo loctite 495&collections={{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "internet"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "adhesivo loctite 495"
+                },
+                {
+                  "key": "collections",
+                  "value": "{{collectionName}}"
+                }
+              ]
+            },
+            "description": "Búsqueda con stream de internet para cliente 003592 que compró LOCTITE"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Detección de Duplicados",
+      "item": [
+        {
+          "name": "Detectar Duplicados - General",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"similarityThreshold\": 0.85,\n  \"limit\": 50,\n  \"useAiClassification\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar productos duplicados en toda la colección"
+          }
+        },
+        {
+          "name": "Detectar Duplicados - Cliente Específico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"similarityThreshold\": 0.80,\n  \"limit\": 30,\n  \"useAiClassification\": true,\n  \"filters\": {\n    \"cliente\": \"004401\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar duplicados solo para productos del cliente 004401"
+          }
+        },
+        {
+          "name": "Detectar Duplicados - Marca PILOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"similarityThreshold\": 0.90,\n  \"limit\": 25,\n  \"useAiClassification\": false,\n  \"filters\": {\n    \"marca\": \"PILOT\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar duplicados específicamente en productos marca PILOT"
+          }
+        },
+        {
+          "name": "Analizar Producto Específico - Lentes HONEYWELL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"productId\": \"41010584\",\n  \"similarityThreshold\": 0.85\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/analyze-product",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "analyze-product"]
+            },
+            "description": "Analizar duplicados del producto lentes HONEYWELL código 41010584"
+          }
+        },
+        {
+          "name": "Analizar Producto Específico - Bolígrafo PILOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"productId\": \"A0011920\",\n  \"similarityThreshold\": 0.80\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/analyze-product",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "analyze-product"]
+            },
+            "description": "Analizar duplicados del bolígrafo PILOT código A0011920"
+          }
+        },
+        {
+          "name": "Reporte de Duplicados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/report?collection={{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "report"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collectionName}}"
+                }
+              ]
+            },
+            "description": "Obtener reporte completo de duplicados encontrados"
+          }
+        },
+        {
+          "name": "Valores de Filtros Disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/filter-values?collection={{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "filter-values"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collectionName}}"
+                }
+              ]
+            },
+            "description": "Obtener lista de valores disponibles para filtros (clientes, marcas, etc.)"
+          }
+        },
+        {
+          "name": "Validar Existencia de Productos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"productIds\": [\"41010584\", \"41092033\", \"A0011920\", \"26021134\", \"26020017\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/validate-exists",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "validate-exists"]
+            },
+            "description": "Validar que productos específicos existen en la colección"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔗 Webhooks",
+      "item": [
+        {
+          "name": "Webhook Sincronización - INSERT MSSQL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Secret",
+                "value": "webhook-secret-here"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"INSERT\",\n  \"table\": \"productos\",\n  \"data\": {\n    \"Cliente\": \"000106\",\n    \"Codigo\": \"41010999\",\n    \"Descripcion\": \"NUEVO PRODUCTO HONEYWELL TEST\",\n    \"Marca\": \"HONEYWELL\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/sync/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "sync", "{{datasourceId}}"]
+            },
+            "description": "Webhook para recibir cambios automáticos desde MSSQL EFC_DB_PROD"
+          }
+        },
+        {
+          "name": "Webhook Sincronización - UPDATE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Secret",
+                "value": "webhook-secret-here"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"UPDATE\",\n  \"table\": \"productos\",\n  \"data\": {\n    \"Cliente\": \"004401\",\n    \"Codigo\": \"26020017\",\n    \"Descripcion\": \"LAPICERO TINTA FINA BPS-FINE AZUL 0.5 PILOT BPS-AF - ACTUALIZADO\",\n    \"Marca\": \"PILOT\"\n  },\n  \"oldData\": {\n    \"Cliente\": \"004401\",\n    \"Codigo\": \"26020017\",\n    \"Descripcion\": \"LAPICERO TINTA FINA BPS-FINE AZUL 0.5 PILOT BPS-AF\",\n    \"Marca\": \"PILOT\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/sync/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "sync", "{{datasourceId}}"]
+            },
+            "description": "Webhook para actualización de producto existente en catalogo_efc"
+          }
+        },
+        {
+          "name": "Webhook Sincronización - DELETE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Secret",
+                "value": "webhook-secret-here"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"DELETE\",\n  \"table\": \"productos\",\n  \"data\": {\n    \"Cliente\": \"000633\",\n    \"Codigo\": \"29010015\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/sync/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "sync", "{{datasourceId}}"]
+            },
+            "description": "Webhook para eliminación de producto de catalogo_efc"
+          }
+        }
+      ]
+    }
+  ]
+}
