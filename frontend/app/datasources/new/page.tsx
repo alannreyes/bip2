@@ -10,11 +10,19 @@ import Link from 'next/link';
 
 // Helper function to get API URL dynamically based on current hostname
 function getApiBaseUrl(): string {
+  // Prefer environment variable from Docker/build time
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Browser runtime detection (for direct server deployment)
   if (typeof window !== 'undefined') {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     return `${protocol}//${hostname}:3001/api`;
   }
+  
+  // Fallback for server-side rendering
   return 'http://192.168.40.197:3001/api';
 }
 

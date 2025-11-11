@@ -6,31 +6,30 @@ import axios from 'axios';
  * This ensures the frontend works from any IP/hostname without requiring a rebuild.
  */
 function getApiBaseUrl(): string {
+  // Prefer environment variable from Docker/build time
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Browser runtime detection (for direct server deployment)
   if (typeof window !== 'undefined') {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     return `${protocol}//${hostname}:3001/api`;
   }
-  // Fallback for server-side rendering - use production IP
+  
+  // Fallback for server-side rendering
   return 'http://192.168.40.197:3001/api';
 }
 
 export const api = axios.create({
-  baseURL: 'http://192.168.40.197:3001/api', // Production server fallback
+  baseURL: getApiBaseUrl(), // Use dynamic detection
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Override baseURL on first request to use runtime hostname
-let baseUrlSet = false;
-api.interceptors.request.use((config) => {
-  if (!baseUrlSet) {
-    api.defaults.baseURL = getApiBaseUrl();
-    baseUrlSet = true;
-  }
-  return config;
-});
+// No need for interceptor since we set baseURL dynamically in constructor
 
 // Datasources API
 export const datasourcesApi = {

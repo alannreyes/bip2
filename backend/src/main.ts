@@ -34,6 +34,8 @@ async function bootstrap() {
     'http://127.0.0.1:3011',
     'http://192.168.40.197:3011',  // Production frontend server
     'http://192.168.40.197:3000',  // Alternative frontend port
+    'http://frontend:3000',        // Docker internal frontend service
+    'http://bip2-frontend:3000',   // Docker container name
     ...(corsOriginsEnv ? corsOriginsEnv.split(',').map(origin => origin.trim()) : []),
   ].filter(Boolean);
 
