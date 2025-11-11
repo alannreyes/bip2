@@ -32,6 +32,8 @@ async function bootstrap() {
     'http://localhost:3004',
     'http://localhost:3011',
     'http://127.0.0.1:3011',
+    'http://192.168.40.197:3011',  // Production frontend server
+    'http://192.168.40.197:3000',  // Alternative frontend port
     ...(corsOriginsEnv ? corsOriginsEnv.split(',').map(origin => origin.trim()) : []),
   ].filter(Boolean);
 

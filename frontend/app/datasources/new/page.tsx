@@ -15,7 +15,7 @@ function getApiBaseUrl(): string {
     const hostname = window.location.hostname;
     return `${protocol}//${hostname}:3001/api`;
   }
-  return 'http://localhost:3001/api';
+  return 'http://192.168.40.197:3001/api';
 }
 
 type DatasourceType = 'mssql' | 'mysql' | 'postgresql';

@@ -11,12 +11,12 @@ function getApiBaseUrl(): string {
     const hostname = window.location.hostname;
     return `${protocol}//${hostname}:3001/api`;
   }
-  // Fallback for server-side rendering
-  return 'http://localhost:3001/api';
+  // Fallback for server-side rendering - use production IP
+  return 'http://192.168.40.197:3001/api';
 }
 
 export const api = axios.create({
-  baseURL: 'http://localhost:3001/api', // Temporary fallback
+  baseURL: 'http://192.168.40.197:3001/api', // Production server fallback
   headers: {
     'Content-Type': 'application/json',
   },
