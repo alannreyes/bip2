@@ -295,48 +295,84 @@ export class SyncService {
   /**
    * 🧠 SMART RESUME: Detecta si un job debe resumirse basado en registros ya procesados
    * Útil para recuperar sync jobs interrumpidos y evitar reprocesar registros costosos
+   *
+   * Estrategia:
+   * 1. Verifica si el job actual tiene processedRecords > 0
+   * 2. Si no, busca un job anterior del mismo datasource con processedRecords > 0
+   * 3. Si encuentra uno, hereda sus valores para continuar desde ese punto
    */
   async checkIfJobShouldResume(jobId: string): Promise<{ shouldResume: boolean, lastOffset: number, stats: any }> {
     const job = await this.syncJobRepository.findOne({ where: { id: jobId } });
-    
+
     if (!job) {
       return { shouldResume: false, lastOffset: 0, stats: { error: 'Job not found' } };
     }
-    
-    // Si ya tiene registros procesados pero status no es 'completed'
+
+    let resumeSource = job;
+
+    // Si el job actual tiene registros procesados, usarlos
     if (job.processedRecords > 0 && job.status !== 'completed') {
-      this.logger.log(`🔄 RESTART DETECTED: Job ${jobId} has ${job.processedRecords} processed records but status is '${job.status}'`);
-      
+      this.logger.log(`🔄 RESTART DETECTED: Current job ${jobId} has ${job.processedRecords} processed records but status is '${job.status}'`);
+    }
+    // Si no, buscar un job anterior del mismo datasource con registros procesados
+    else if (job.processedRecords === 0 || job.status === 'pending') {
+      const previousJob = await this.syncJobRepository.findOne({
+        where: {
+          datasourceId: job.datasourceId,
+          type: job.type,
+          status: 'running', // Buscar jobs que estaban corriendo pero se interrumpieron
+        },
+        order: { createdAt: 'DESC' },
+      });
+
+      if (previousJob && previousJob.processedRecords > 0) {
+        this.logger.log(`🔍 INHERITED RESUME: Found previous job ${previousJob.id} with ${previousJob.processedRecords} processed records`);
+        this.logger.log(`🔄 INHERITING: Current job ${jobId} will resume from previous job's progress`);
+
+        // Copiar valores del job anterior al actual
+        job.processedRecords = previousJob.processedRecords;
+        job.successfulRecords = previousJob.successfulRecords;
+        job.failedRecords = previousJob.failedRecords;
+
+        // Guardar los valores heredados
+        await this.syncJobRepository.save(job);
+
+        resumeSource = job; // Usar los valores heredados
+      }
+    }
+
+    // Verificar si tenemos que resumir
+    if (resumeSource.processedRecords > 0 && resumeSource.status !== 'completed') {
       // Calcular último offset basado en registros procesados
       // Usamos batch size de 100 (mismo que full-sync.processor.ts)
       const batchSize = 100;
-      const lastCompleteBatch = Math.floor(job.processedRecords / batchSize);
+      const lastCompleteBatch = Math.floor(resumeSource.processedRecords / batchSize);
       const lastOffset = lastCompleteBatch * batchSize;
-      
+
       const stats = {
-        processedRecords: job.processedRecords,
-        successfulRecords: job.successfulRecords,
-        failedRecords: job.failedRecords,
-        totalRecords: job.totalRecords,
-        progressPercent: job.totalRecords ? Math.round((job.processedRecords / job.totalRecords) * 100) : 0,
-        estimatedRecordsSaved: job.processedRecords,
+        processedRecords: resumeSource.processedRecords,
+        successfulRecords: resumeSource.successfulRecords,
+        failedRecords: resumeSource.failedRecords,
+        totalRecords: resumeSource.totalRecords,
+        progressPercent: resumeSource.totalRecords ? Math.round((resumeSource.processedRecords / resumeSource.totalRecords) * 100) : 0,
+        estimatedRecordsSaved: resumeSource.processedRecords,
         lastCompleteBatch: lastCompleteBatch + 1, // +1 porque es 0-indexed
       };
-      
-      this.logger.log(`📊 RESUME STATS: Will resume from batch ${lastCompleteBatch + 1}, offset ${lastOffset}. Saved processing ${job.processedRecords} records!`);
-      
+
+      this.logger.log(`📊 RESUME STATS: Will resume from batch ${lastCompleteBatch + 1}, offset ${lastOffset}. Saved processing ${resumeSource.processedRecords} records!`);
+
       return { shouldResume: true, lastOffset, stats };
     }
-    
-    this.logger.log(`🆕 NEW SYNC: Job ${jobId} starting fresh (processedRecords: ${job.processedRecords}, status: ${job.status})`);
-    return { 
-      shouldResume: false, 
-      lastOffset: 0, 
-      stats: { 
-        processedRecords: job.processedRecords, 
-        status: job.status,
+
+    this.logger.log(`🆕 NEW SYNC: Job ${jobId} starting fresh (processedRecords: ${resumeSource.processedRecords}, status: ${resumeSource.status})`);
+    return {
+      shouldResume: false,
+      lastOffset: 0,
+      stats: {
+        processedRecords: resumeSource.processedRecords,
+        status: resumeSource.status,
         reason: 'No records to resume or job already completed'
-      } 
+      }
     };
   }
 
