@@ -1,0 +1,945 @@
+{
+  "info": {
+    "name": "BIP2 - Sistema de Búsqueda Inteligente de Productos",
+    "description": "Colección completa de endpoints para el sistema BIP2 con ejemplos basados en datos reales. Soporta múltiples datasources: catalogo_efc y catalogo_stock",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.40.197:3001/api",
+      "type": "string"
+    },
+    {
+      "key": "datasourceId",
+      "value": "8c69c615-96fb-46bd-bc5b-6a9fcbc38a0b",
+      "type": "string",
+      "disabled": false
+    },
+    {
+      "key": "datasourceName",
+      "value": "catalogo_efc",
+      "type": "string"
+    },
+    {
+      "key": "collectionName",
+      "value": "catalogo_efc",
+      "type": "string"
+    },
+    {
+      "key": "datasourceId_stock",
+      "value": "0f647a20-8c25-404f-90d9-60dcd7ca1789",
+      "type": "string"
+    },
+    {
+      "key": "datasourceName_stock",
+      "value": "catalogo_stock",
+      "type": "string"
+    },
+    {
+      "key": "collectionName_stock",
+      "value": "catalogo_stock",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Check",
+      "item": [
+        {
+          "name": "Health Check Completo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verificar el estado general del sistema"
+          }
+        },
+        {
+          "name": "Health Check Database",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/database",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "database"]
+            },
+            "description": "Verificar el estado de PostgreSQL"
+          }
+        },
+        {
+          "name": "Health Check Qdrant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/qdrant",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "qdrant"]
+            },
+            "description": "Verificar el estado de Qdrant Vector DB"
+          }
+        },
+        {
+          "name": "Health Check Redis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/redis",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "redis"]
+            },
+            "description": "Verificar el estado de Redis"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗄️ Datasources",
+      "item": [
+        {
+          "name": "Crear Datasource",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maestro de Articulos Principal de EFC\",\n  \"description\": \"Base de datos principal MSSQL con productos del catálogo EFC\",\n  \"type\": \"mssql\",\n  \"connectionConfig\": {\n    \"host\": \"192.168.40.251\",\n    \"port\": 1433,\n    \"user\": \"BIP\",\n    \"password\": \"your-password\",\n    \"database\": \"EFC_DB_PROD\"\n  },\n  \"query\": \"SELECT Cliente, Codigo, Descripcion, Marca FROM productos WHERE Cliente IN ('000106', '000633', '003592', '004401')\",\n  \"syncEnabled\": true,\n  \"syncFrequency\": \"daily\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources"]
+            },
+            "description": "Crear una nueva fuente de datos con productos del catálogo"
+          }
+        },
+        {
+          "name": "Listar Todas las Datasources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources"]
+            },
+            "description": "Obtener todas las fuentes de datos configuradas (catalogo_efc y catalogo_stock)"
+          }
+        },
+        {
+          "name": "Obtener Datasource catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}"]
+            },
+            "description": "Obtener detalles de la fuente de datos catalogo_efc"
+          }
+        },
+        {
+          "name": "Obtener Datasource catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId_stock}}"]
+            },
+            "description": "Obtener detalles de la fuente de datos catalogo_stock"
+          }
+        },
+        {
+          "name": "Actualizar Datasource",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maestro de Articulos EFC Actualizado\",\n  \"description\": \"Base de datos MSSQL EFC_DB_PROD - versión actualizada\",\n  \"syncEnabled\": true,\n  \"syncFrequency\": \"0 2 * * *\",\n  \"query\": \"SELECT Cliente, Codigo, Descripcion, Marca FROM productos WHERE Cliente IN ('000106', '000633', '003592', '004401') AND activo = 1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}"]
+            },
+            "description": "Actualizar la fuente de datos catalogo_efc"
+          }
+        },
+        {
+          "name": "Eliminar Datasource",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/datasource-id-123",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "datasource-id-123"]
+            },
+            "description": "Eliminar una fuente de datos"
+          }
+        },
+        {
+          "name": "Test Conexión Datasource",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}", "test"]
+            },
+            "description": "Probar la conexión de una fuente de datos"
+          }
+        },
+        {
+          "name": "Test Conexión sin Guardar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"mssql\",\n  \"connectionConfig\": {\n    \"host\": \"192.168.40.251\",\n    \"port\": 1433,\n    \"user\": \"BIP\",\n    \"password\": \"your-password\",\n    \"database\": \"EFC_DB_PROD\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources/test-connection",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "test-connection"]
+            },
+            "description": "Probar una configuración de conexión antes de guardarla"
+          }
+        },
+        {
+          "name": "Preview de Datos - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}/preview?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}", "preview"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Ver una muestra de los datos de catalogo_efc"
+          }
+        },
+        {
+          "name": "Preview de Datos - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId_stock}}/preview?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId_stock}}", "preview"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Ver una muestra de los datos de catalogo_stock"
+          }
+        },
+        {
+          "name": "Validar Query SQL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT Cliente, Codigo, Descripcion, Marca FROM productos WHERE Cliente = '000106' LIMIT 10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}/validate-query",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}", "validate-query"]
+            },
+            "description": "Validar una consulta SQL antes de ejecutarla"
+          }
+        },
+        {
+          "name": "Regenerar Webhook Secret",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId}}/regenerate-webhook-secret",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId}}", "regenerate-webhook-secret"]
+            },
+            "description": "Regenerar el secreto del webhook para sincronización"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗂️ Collections (Qdrant)",
+      "item": [
+        {
+          "name": "Crear Colección catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{collectionName}}\",\n  \"vectorSize\": 3072,\n  \"distance\": \"Cosine\",\n  \"datasourceId\": \"{{datasourceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/collections",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections"]
+            },
+            "description": "Crear una nueva colección en Qdrant para catalogo_efc"
+          }
+        },
+        {
+          "name": "Crear Colección catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{collectionName_stock}}\",\n  \"vectorSize\": 3072,\n  \"distance\": \"Cosine\",\n  \"datasourceId\": \"{{datasourceId_stock}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/collections",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections"]
+            },
+            "description": "Crear una nueva colección en Qdrant para catalogo_stock"
+          }
+        },
+        {
+          "name": "Listar Colecciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections"]
+            },
+            "description": "Obtener todas las colecciones disponibles en Qdrant (catalogo_efc y catalogo_stock)"
+          }
+        },
+        {
+          "name": "Obtener Colección catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName}}"]
+            },
+            "description": "Obtener información de la colección catalogo_efc"
+          }
+        },
+        {
+          "name": "Obtener Colección catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName_stock}}"]
+            },
+            "description": "Obtener información de la colección catalogo_stock"
+          }
+        },
+        {
+          "name": "Info Detallada - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName}}/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName}}", "info"]
+            },
+            "description": "Obtener información detallada de catalogo_efc"
+          }
+        },
+        {
+          "name": "Info Detallada - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName_stock}}/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName_stock}}", "info"]
+            },
+            "description": "Obtener información detallada de catalogo_stock"
+          }
+        },
+        {
+          "name": "Eliminar Colección",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collectionName}}"]
+            },
+            "description": "Eliminar la colección catalogo_efc de Qdrant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Sincronización",
+      "item": [
+        {
+          "name": "Sincronización Completa - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/full/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "full", "{{datasourceId}}"]
+            },
+            "description": "Realizar una sincronización completa de catalogo_efc"
+          }
+        },
+        {
+          "name": "Sincronización Completa - catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/full/{{datasourceId_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "full", "{{datasourceId_stock}}"]
+            },
+            "description": "Realizar una sincronización completa de catalogo_stock"
+          }
+        },
+        {
+          "name": "Sincronización Incremental - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/incremental/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "incremental", "{{datasourceId}}"]
+            },
+            "description": "Realizar una sincronización incremental de productos modificados en catalogo_efc"
+          }
+        },
+        {
+          "name": "Sincronización Incremental - catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/incremental/{{datasourceId_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "incremental", "{{datasourceId_stock}}"]
+            },
+            "description": "Realizar una sincronización incremental de productos modificados en catalogo_stock"
+          }
+        },
+        {
+          "name": "Listar Jobs de Sincronización",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Obtener la lista de jobs de sincronización de todos los datasources"
+          }
+        },
+        {
+          "name": "Listar Jobs - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs?datasourceId={{datasourceId}}&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"],
+              "query": [
+                {
+                  "key": "datasourceId",
+                  "value": "{{datasourceId}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Obtener jobs de sincronización de catalogo_efc"
+          }
+        },
+        {
+          "name": "Listar Jobs - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs?datasourceId={{datasourceId_stock}}&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"],
+              "query": [
+                {
+                  "key": "datasourceId",
+                  "value": "{{datasourceId_stock}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Obtener jobs de sincronización de catalogo_stock"
+          }
+        },
+        {
+          "name": "Obtener Job por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs/job-123-abc",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs", "job-123-abc"]
+            },
+            "description": "Obtener detalles de un job específico de sincronización"
+          }
+        },
+        {
+          "name": "Cancelar Job",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs/job-123-abc/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs", "job-123-abc", "cancel"]
+            },
+            "description": "Cancelar un job de sincronización en progreso"
+          }
+        },
+        {
+          "name": "Obtener Errores de Job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/errors/job-123-abc",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "errors", "job-123-abc"]
+            },
+            "description": "Obtener errores ocurridos durante un job de sincronización"
+          }
+        },
+        {
+          "name": "Reintentar Errores",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/errors/job-123-abc/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "errors", "job-123-abc", "retry"]
+            },
+            "description": "Reintentar procesar los elementos que fallaron en un job"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Búsqueda",
+      "item": [
+        {
+          "name": "Búsqueda por Texto - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes seguridad\",\n  \"collections\": [\"{{collectionName}}\"],\n  \"limit\": 10,\n  \"includeInternetSearch\": false,\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda de productos por texto en catalogo_efc"
+          }
+        },
+        {
+          "name": "Búsqueda por Texto - catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"productos en stock\",\n  \"collections\": [\"{{collectionName_stock}}\"],\n  \"limit\": 10,\n  \"includeInternetSearch\": false,\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda de productos por texto en catalogo_stock"
+          }
+        },
+        {
+          "name": "Búsqueda Múltiple Datasources",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"productos\",\n  \"collections\": [\"{{collectionName}}\", \"{{collectionName_stock}}\"],\n  \"limit\": 10,\n  \"includeInternetSearch\": false,\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda simultánea en catalogo_efc y catalogo_stock"
+          }
+        },
+        {
+          "name": "Búsqueda por Imagen",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/image?collection={{collectionName}}&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "image"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collectionName}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Búsqueda de productos similares subiendo una imagen"
+          }
+        },
+        {
+          "name": "Recomendaciones - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"positiveIds\": [\"41010584\"],\n  \"negativeIds\": [],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/recommend",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommend"]
+            },
+            "description": "Recomendar productos similares basado en uno de catalogo_efc"
+          }
+        },
+        {
+          "name": "Recomendaciones - catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName_stock}}\",\n  \"positiveIds\": [\"STOCK001\"],\n  \"negativeIds\": [],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/recommend",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommend"]
+            },
+            "description": "Recomendar productos similares basado en uno de catalogo_stock"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Detección de Duplicados",
+      "item": [
+        {
+          "name": "Detectar Duplicados - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName}}\",\n  \"similarityThreshold\": 0.85,\n  \"limit\": 50,\n  \"useAiClassification\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar productos duplicados en catalogo_efc"
+          }
+        },
+        {
+          "name": "Detectar Duplicados - catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collectionName_stock}}\",\n  \"similarityThreshold\": 0.85,\n  \"limit\": 50,\n  \"useAiClassification\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar productos duplicados en catalogo_stock"
+          }
+        },
+        {
+          "name": "Reporte de Duplicados - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/report?collection={{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "report"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collectionName}}"
+                }
+              ]
+            },
+            "description": "Obtener reporte completo de duplicados en catalogo_efc"
+          }
+        },
+        {
+          "name": "Reporte de Duplicados - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/report?collection={{collectionName_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "report"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collectionName_stock}}"
+                }
+              ]
+            },
+            "description": "Obtener reporte completo de duplicados en catalogo_stock"
+          }
+        },
+        {
+          "name": "Valores de Filtros - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/filter-values?collection={{collectionName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "filter-values"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collectionName}}"
+                }
+              ]
+            },
+            "description": "Obtener lista de valores disponibles para filtros en catalogo_efc"
+          }
+        },
+        {
+          "name": "Valores de Filtros - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/filter-values?collection={{collectionName_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "filter-values"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collectionName_stock}}"
+                }
+              ]
+            },
+            "description": "Obtener lista de valores disponibles para filtros en catalogo_stock"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔗 Webhooks",
+      "item": [
+        {
+          "name": "Webhook Sincronización - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Secret",
+                "value": "webhook-secret-here"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"INSERT\",\n  \"table\": \"productos\",\n  \"data\": {\n    \"Cliente\": \"000106\",\n    \"Codigo\": \"41010999\",\n    \"Descripcion\": \"NUEVO PRODUCTO HONEYWELL TEST\",\n    \"Marca\": \"HONEYWELL\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/sync/{{datasourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "sync", "{{datasourceId}}"]
+            },
+            "description": "Webhook para recibir cambios automáticos de catalogo_efc"
+          }
+        },
+        {
+          "name": "Webhook Sincronización - catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Secret",
+                "value": "webhook-secret-here"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"INSERT\",\n  \"table\": \"inventory\",\n  \"data\": {\n    \"productId\": \"STOCK001\",\n    \"name\": \"NUEVO PRODUCTO EN STOCK\",\n    \"quantity\": 100\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/sync/{{datasourceId_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "sync", "{{datasourceId_stock}}"]
+            },
+            "description": "Webhook para recibir cambios automáticos de catalogo_stock"
+          }
+        }
+      ]
+    }
+  ]
+}
