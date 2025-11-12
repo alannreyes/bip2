@@ -2,9 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   // output: 'standalone', // Comentado - usar servidor normal para evitar problemas con archivos estáticos
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
-  },
+  // API URL is determined dynamically at runtime in lib/api.ts based on window.location.hostname
+  // This allows the frontend to work from any IP/hostname without requiring a rebuild
   // Deshabilitar linting durante el build para evitar errores
   eslint: {
     ignoreDuringBuilds: true,
