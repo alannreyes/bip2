@@ -320,13 +320,12 @@ export class SyncService {
         where: {
           datasourceId: job.datasourceId,
           type: job.type,
-          status: 'running', // Buscar jobs que estaban corriendo pero se interrumpieron
         },
         order: { createdAt: 'DESC' },
       });
 
-      if (previousJob && previousJob.processedRecords > 0) {
-        this.logger.log(`🔍 INHERITED RESUME: Found previous job ${previousJob.id} with ${previousJob.processedRecords} processed records`);
+      if (previousJob && previousJob.processedRecords > 0 && previousJob.status !== 'completed') {
+        this.logger.log(`🔍 INHERITED RESUME: Found previous job ${previousJob.id} (status: ${previousJob.status}) with ${previousJob.processedRecords} processed records`);
         this.logger.log(`🔄 INHERITING: Current job ${jobId} will resume from previous job's progress`);
 
         // Copiar valores del job anterior al actual
