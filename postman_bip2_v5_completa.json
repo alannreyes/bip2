@@ -1,0 +1,1338 @@
+{
+  "info": {
+    "name": "BIP2 - API Completa (Sin Variables)",
+    "description": "Colección completa BIP2 con todos los endpoints. SIN VARIABLES - Valores hardcodeados para copiar y pegar directo.",
+    "version": "5.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "📊 BÚSQUEDA BÁSICA",
+      "description": "Búsquedas simples sin filtros",
+      "item": [
+        {
+          "name": "Buscar: Desarmador en EFC",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Buscar: Martillo en EFC",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Buscar: Llave inglesa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"llave inglesa\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Buscar: Detergente en Stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"detergente\",\n  \"collections\": [\"catalogo_stock\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 CON FILTRO MARCA",
+      "description": "Buscar productos de una marca específica",
+      "item": [
+        {
+          "name": "Lentes HONEYWELL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"HONEYWELL\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Pegamento LOCTITE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Bolígrafos PILOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"PILOT\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Herramientas STANLEY",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"destornillador martillo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"STANLEY\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 CON FILTRO CLIENTE",
+      "description": "Buscar según histórico de compras del cliente",
+      "item": [
+        {
+          "name": "Cliente 000106 - HONEYWELL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Cliente 003592 - LOCTITE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"pegamento\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"003592\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Cliente 004401 - PILOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"004401\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎯 FILTROS DE PAYLOAD",
+      "description": "Filtrar por campo de payload (ventas, stock, etc)",
+      "item": [
+        {
+          "name": "Productos con ventas >= 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 1 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "MUY POPULARES (ventas >= 50)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Solo EN STOCK",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"destornillador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "MODERADAMENTE POPULARES (5-50 ventas)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 5, \"lte\": 50 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "En stock Y >= 10 ventas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 10 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Con lista de precios activa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"llave\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎭 COMBINADOS: Marca + Payload Filters",
+      "description": "Usar marca Y filtro de payload juntos",
+      "item": [
+        {
+          "name": "HONEYWELL + con ventas >= 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"HONEYWELL\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 1 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "LOCTITE + en stock + populares",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\",\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "PILOT + con precio lista",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"PILOT\",\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥🎯 COMBINADOS: Cliente + Payload Filters",
+      "description": "Buscar para un cliente CON filtros de payload",
+      "item": [
+        {
+          "name": "Cliente 000106 + en stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\",\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Cliente 003592 + muy populares",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"pegamento\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"003592\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Cliente 004401 + con lista de precios",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"bolígrafos lápices\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"004401\",\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ BÚSQUEDA MULTI-COLECCIÓN",
+      "description": "Buscar en 2 catálogos a la vez",
+      "item": [
+        {
+          "name": "EFC + Stock (sin filtros)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"destornillador\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "EFC + Stock (en stock solamente)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "EFC + Stock (muy populares)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🤖 CON LLM FILTER",
+      "description": "Usa IA (Gemini) para refinar resultados (más lento pero más preciso)",
+      "item": [
+        {
+          "name": "Búsqueda básica con LLM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"desarmador preciso\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "LLM + payload filters",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"herramientas de calidad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"useLLMFilter\": true,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🖼️ BÚSQUEDA POR IMAGEN",
+      "description": "Buscar productos subiendo una imagen",
+      "item": [
+        {
+          "name": "Buscar por imagen - EFC",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/ruta/a/imagen.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/image?collection=catalogo_efc_200k&limit=10",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "image"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "catalogo_efc_200k"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar por imagen - Stock",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/ruta/a/imagen.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/image?collection=catalogo_stock&limit=10",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "image"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "catalogo_stock"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎯 RECOMENDACIONES",
+      "description": "Obtener productos recomendados basados en preferencias",
+      "item": [
+        {
+          "name": "Recomendar basado en desarmador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_efc_200k\",\n  \"positiveIds\": [\"ALM_FT10\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/recommend",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "recommend"]
+            }
+          }
+        },
+        {
+          "name": "Recomendar con positivos y negativos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_efc_200k\",\n  \"positiveIds\": [\"ALM_FT10\", \"ALM_FT11\"],\n  \"negativeIds\": [\"ALM_FT20\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/recommend",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "recommend"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 BÚSQUEDA VECTORIAL RAW",
+      "description": "Ver resultados brutos de búsqueda vectorial sin procesamiento",
+      "item": [
+        {
+          "name": "Raw vectorial - EFC",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/raw-vectorial",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "raw-vectorial"]
+            }
+          }
+        },
+        {
+          "name": "Raw vectorial - Multi-colección",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/raw-vectorial",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "raw-vectorial"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🌐 BÚSQUEDA EN INTERNET",
+      "description": "Buscar en internet para complementar resultados",
+      "item": [
+        {
+          "name": "Internet + EFC (SSE Stream)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/search/internet?query=destornillador&collections=catalogo_efc_200k",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "internet"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "destornillador"
+                },
+                {
+                  "key": "collections",
+                  "value": "catalogo_efc_200k"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📈 COLECCIONES",
+      "description": "Gestionar colecciones de Qdrant",
+      "item": [
+        {
+          "name": "Listar todas las colecciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/collections",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "collections"]
+            }
+          }
+        },
+        {
+          "name": "Obtener info de colección",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/collections/catalogo_efc_200k/info",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "collections", "catalogo_efc_200k", "info"]
+            }
+          }
+        },
+        {
+          "name": "Crear nueva colección",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"catalogo_nuevo\",\n  \"vectorSize\": 3072,\n  \"distance\": \"Cosine\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/collections",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "collections"]
+            }
+          }
+        },
+        {
+          "name": "Registrar colección existente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"catalogo_existente\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/collections/register",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "collections", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 SINCRONIZACIÓN",
+      "description": "Gestionar sync jobs y datasources",
+      "item": [
+        {
+          "name": "Ver todos los Sync Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/sync/jobs",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "sync", "jobs"]
+            }
+          }
+        },
+        {
+          "name": "Ver Job específico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/sync/jobs/550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "sync", "jobs", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          }
+        },
+        {
+          "name": "Sincronización completa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/sync/full/550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "sync", "full", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          }
+        },
+        {
+          "name": "Sincronización incremental",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/sync/incremental/550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "sync", "incremental", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          }
+        },
+        {
+          "name": "Cancelar Job",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/sync/jobs/550e8400-e29b-41d4-a716-446655440000/cancel",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "sync", "jobs", "550e8400-e29b-41d4-a716-446655440000", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Ver errores de un Job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/sync/errors/550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "sync", "errors", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 DATASOURCES",
+      "description": "Gestionar fuentes de datos",
+      "item": [
+        {
+          "name": "Listar datasources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/datasources",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "datasources"]
+            }
+          }
+        },
+        {
+          "name": "Obtener datasource",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/datasources/550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "datasources", "550e8400-e29b-41d4-a716-446655440000"]
+            }
+          }
+        },
+        {
+          "name": "Crear datasource",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mi Datasource\",\n  \"type\": \"postgresql\",\n  \"connectionConfig\": {\n    \"host\": \"localhost\",\n    \"port\": 5432,\n    \"username\": \"usuario\",\n    \"password\": \"contraseña\",\n    \"database\": \"midb\"\n  },\n  \"queryTemplate\": \"SELECT id, nombre, descripcion FROM productos\",\n  \"idField\": \"id\",\n  \"embeddingFields\": [\"nombre\", \"descripcion\"],\n  \"qdrantCollection\": \"catalogo_nuevo\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/datasources",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "datasources"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "❤️ SALUD DEL SISTEMA",
+      "description": "Monitoreo de salud de servicios",
+      "item": [
+        {
+          "name": "Health Check General",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "health"]
+            }
+          }
+        },
+        {
+          "name": "Health Check - Qdrant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/health/qdrant",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "health", "qdrant"]
+            }
+          }
+        },
+        {
+          "name": "Health Check - Database",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/health/database",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "health", "database"]
+            }
+          }
+        },
+        {
+          "name": "Health Check - Redis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/health/redis",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "health", "redis"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔥 CASOS DE USO COMUNES",
+      "description": "Ejemplos listos para copiar según casos reales",
+      "item": [
+        {
+          "name": "Caso 1: Dame los mejores desarmadores en stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Caso 2: ¿Qué ha comprado HONEYWELL?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Caso 3: Pegamentos LOCTITE que se venden",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gt\": 1 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Caso 4: Herramientas populares (50+ ventas) en stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"martillo cincel destornillador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 },\n    \"en_stock\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        },
+        {
+          "name": "Caso 5: Buscar en ambos catálogos con stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"llave herramienta\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 20,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/search/text",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "search", "text"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
