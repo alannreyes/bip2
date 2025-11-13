@@ -148,7 +148,54 @@ Usa IA para refinar resultados (más lento)
 
 ---
 
-### 9. 📈 STATUS Y JOBS
+### 9. 🔍 VER TODOS LOS PAYLOADS DE UN PRODUCTO ⭐ NUEVO
+**Obtener TODOS los campos de un producto por ID** - Esto responde tu pregunta
+- Obtener payloads de un producto EFC
+- Obtener payloads de un producto Stock
+
+**Endpoint:** `GET /api/search/product/:collection/:productId`
+
+**Ejemplo:**
+```bash
+GET http://192.168.40.197:3001/api/search/product/catalogo_efc_200k/ALM_FT10
+```
+
+**Respuesta:**
+```json
+{
+  "collection": "catalogo_efc_200k",
+  "productId": "ALM_FT10",
+  "id": "ALM_FT10",
+  "payload": {
+    "descripcion": "Destornillador...",
+    "marca": "STANLEY",
+    "ventas_3_anios": 25,
+    "en_stock": true,
+    "precio_lista": true,
+    "fecha_ultima_venta": "2025-11-10",
+    ...todos los demás campos
+  },
+  "payload_fields": [
+    "descripcion",
+    "marca",
+    "ventas_3_anios",
+    "en_stock",
+    "precio_lista",
+    "fecha_ultima_venta",
+    ...otros campos
+  ]
+}
+```
+
+**Para qué sirve:**
+- Ver EXACTAMENTE qué campos/payloads tiene un producto
+- Descubrir qué payloads puedes filtrar
+- Entender la estructura de datos completa
+- Debugging de resultados de búsqueda
+
+---
+
+### 10. 📈 STATUS Y JOBS
 Ver estado del sistema
 - Health Check (¿está online?)
 - Listar Datasources (¿qué catálogos hay?)
@@ -273,6 +320,46 @@ O en Postman: usa el endpoint "Ver todos los Sync Jobs"
 
 ---
 
-**Versión:** 4.0.0
+---
+
+## 🎯 Cómo Descubrir Payloads Disponibles (NUEVO)
+
+Si no sabes qué campos puedes filtrar, usa este endpoint:
+
+```bash
+GET http://192.168.40.197:3001/api/search/product/catalogo_efc_200k/ALM_FT10
+```
+
+La respuesta te mostrará `payload_fields` con TODOS los campos disponibles:
+```
+payload_fields: [
+  "descripcion",
+  "marca",
+  "ventas_3_anios",
+  "en_stock",
+  "precio_lista",
+  "fecha_ultima_venta",
+  "categoria",
+  "numero_parte",
+  ... y más
+]
+```
+
+Luego puedes usar cualquier campo en `payloadFilters`:
+```json
+{
+  "query": "herramienta",
+  "collections": ["catalogo_efc_200k"],
+  "payloadFilters": {
+    "numero_parte": "TOOL-2024",
+    "categoria": "Herramientas"
+  }
+}
+```
+
+---
+
+**Versión:** 4.1.0
 **Última actualización:** Noviembre 2025
 **Sin variables:** ✅ Todos los valores directos en cada request
+**Nuevo:** 🆕 Endpoint para ver todos los payloads de un producto
