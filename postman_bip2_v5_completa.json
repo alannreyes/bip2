@@ -22,12 +22,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10\n}"
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -45,12 +45,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10\n}"
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -68,12 +68,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"llave inglesa\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10\n}"
+              "raw": "{\n  \"query\": \"llave inglesa\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -94,9 +94,9 @@
               "raw": "{\n  \"query\": \"detergente\",\n  \"collections\": [\"catalogo_stock\"],\n  \"limit\": 10\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -120,12 +120,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"HONEYWELL\"\n}"
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"marca\": \"HONEYWELL\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -143,12 +143,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\"\n}"
+              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -166,12 +166,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"PILOT\"\n}"
+              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"marca\": \"PILOT\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -189,12 +189,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"destornillador martillo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"STANLEY\"\n}"
+              "raw": "{\n  \"query\": \"destornillador martillo\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"marca\": \"STANLEY\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -218,12 +218,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\"\n}"
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -241,12 +241,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"pegamento\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"003592\"\n}"
+              "raw": "{\n  \"query\": \"pegamento\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"cliente\": \"003592\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -264,12 +264,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"004401\"\n}"
+              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"cliente\": \"004401\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -293,12 +293,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 1 }\n  }\n}"
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 1 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -316,12 +316,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
+              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -339,12 +339,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"destornillador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"destornillador\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -362,12 +362,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 5, \"lte\": 50 }\n  }\n}"
+              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 5, \"lte\": 50 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -385,12 +385,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 10 }\n  }\n}"
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 10 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -408,12 +408,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"llave\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"llave\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -437,12 +437,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"HONEYWELL\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 1 }\n  }\n}"
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"marca\": \"HONEYWELL\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 1 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -460,12 +460,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\",\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
+              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\",\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -483,12 +483,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"PILOT\",\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"bolígrafos\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"marca\": \"PILOT\",\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -512,12 +512,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"lentes\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\",\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"lentes\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\",\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -535,12 +535,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"pegamento\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"003592\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
+              "raw": "{\n  \"query\": \"pegamento\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"cliente\": \"003592\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -558,12 +558,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"bolígrafos lápices\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"004401\",\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"bolígrafos lápices\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"cliente\": \"004401\",\n  \"payloadFilters\": {\n    \"precio_lista\": true\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -587,12 +587,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"destornillador\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 10\n}"
+              "raw": "{\n  \"query\": \"destornillador\",\n  \"collections\": [\"catalogo_efc\", \"catalogo_stock\"],\n  \"limit\": 10\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -610,12 +610,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc\", \"catalogo_stock\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -633,12 +633,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
+              "raw": "{\n  \"query\": \"herramientas\",\n  \"collections\": [\"catalogo_efc\", \"catalogo_stock\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -662,12 +662,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"desarmador preciso\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"useLLMFilter\": true\n}"
+              "raw": "{\n  \"query\": \"desarmador preciso\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"useLLMFilter\": true\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -685,12 +685,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"herramientas de calidad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"useLLMFilter\": true,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
+              "raw": "{\n  \"query\": \"herramientas de calidad\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"useLLMFilter\": true,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -718,15 +718,15 @@
               ]
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/image?collection=catalogo_efc_200k&limit=10",
+              "raw": "http://192.168.40.197:3001/api/search/image?collection=catalogo_efc&limit=10",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "image"],
               "query": [
                 {
                   "key": "collection",
-                  "value": "catalogo_efc_200k"
+                  "value": "catalogo_efc"
                 },
                 {
                   "key": "limit",
@@ -752,9 +752,9 @@
               ]
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/image?collection=catalogo_stock&limit=10",
+              "raw": "http://192.168.40.197:3001/api/search/image?collection=catalogo_stock&limit=10",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "image"],
               "query": [
@@ -788,12 +788,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"collection\": \"catalogo_efc_200k\",\n  \"positiveIds\": [\"ALM_FT10\"],\n  \"limit\": 10\n}"
+              "raw": "{\n  \"collection\": \"catalogo_efc\",\n  \"positiveIds\": [\"ALM_FT10\"],\n  \"limit\": 10\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/recommend",
+              "raw": "http://192.168.40.197:3001/api/search/recommend",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "recommend"]
             }
@@ -811,12 +811,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"collection\": \"catalogo_efc_200k\",\n  \"positiveIds\": [\"ALM_FT10\", \"ALM_FT11\"],\n  \"negativeIds\": [\"ALM_FT20\"],\n  \"limit\": 10\n}"
+              "raw": "{\n  \"collection\": \"catalogo_efc\",\n  \"positiveIds\": [\"ALM_FT10\", \"ALM_FT11\"],\n  \"negativeIds\": [\"ALM_FT20\"],\n  \"limit\": 10\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/recommend",
+              "raw": "http://192.168.40.197:3001/api/search/recommend",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "recommend"]
             }
@@ -840,12 +840,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10\n}"
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/raw-vectorial",
+              "raw": "http://192.168.40.197:3001/api/search/raw-vectorial",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "raw-vectorial"]
             }
@@ -863,12 +863,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 20\n}"
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc\", \"catalogo_stock\"],\n  \"limit\": 20\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/raw-vectorial",
+              "raw": "http://192.168.40.197:3001/api/search/raw-vectorial",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "raw-vectorial"]
             }
@@ -886,9 +886,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/search/internet?query=destornillador&collections=catalogo_efc_200k",
+              "raw": "http://192.168.40.197:3001/api/search/internet?query=destornillador&collections=catalogo_efc",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "internet"],
               "query": [
@@ -898,7 +898,7 @@
                 },
                 {
                   "key": "collections",
-                  "value": "catalogo_efc_200k"
+                  "value": "catalogo_efc"
                 }
               ]
             }
@@ -916,9 +916,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/collections",
+              "raw": "http://192.168.40.197:3001/api/collections",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "collections"]
             }
@@ -930,11 +930,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/collections/catalogo_efc_200k/info",
+              "raw": "http://192.168.40.197:3001/api/collections/catalogo_efc/info",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
-              "path": ["api", "collections", "catalogo_efc_200k", "info"]
+              "path": ["api", "collections", "catalogo_efc", "info"]
             }
           }
         },
@@ -953,9 +953,9 @@
               "raw": "{\n  \"name\": \"catalogo_nuevo\",\n  \"vectorSize\": 3072,\n  \"distance\": \"Cosine\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/collections",
+              "raw": "http://192.168.40.197:3001/api/collections",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "collections"]
             }
@@ -976,9 +976,9 @@
               "raw": "{\n  \"name\": \"catalogo_existente\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/collections/register",
+              "raw": "http://192.168.40.197:3001/api/collections/register",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "collections", "register"]
             }
@@ -996,9 +996,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/sync/jobs",
+              "raw": "http://192.168.40.197:3001/api/sync/jobs",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "sync", "jobs"]
             }
@@ -1010,9 +1010,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/sync/jobs/550e8400-e29b-41d4-a716-446655440000",
+              "raw": "http://192.168.40.197:3001/api/sync/jobs/550e8400-e29b-41d4-a716-446655440000",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "sync", "jobs", "550e8400-e29b-41d4-a716-446655440000"]
             }
@@ -1033,9 +1033,9 @@
               "raw": "{\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/sync/full/550e8400-e29b-41d4-a716-446655440000",
+              "raw": "http://192.168.40.197:3001/api/sync/full/550e8400-e29b-41d4-a716-446655440000",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "sync", "full", "550e8400-e29b-41d4-a716-446655440000"]
             }
@@ -1056,9 +1056,9 @@
               "raw": "{\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/sync/incremental/550e8400-e29b-41d4-a716-446655440000",
+              "raw": "http://192.168.40.197:3001/api/sync/incremental/550e8400-e29b-41d4-a716-446655440000",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "sync", "incremental", "550e8400-e29b-41d4-a716-446655440000"]
             }
@@ -1070,9 +1070,9 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/sync/jobs/550e8400-e29b-41d4-a716-446655440000/cancel",
+              "raw": "http://192.168.40.197:3001/api/sync/jobs/550e8400-e29b-41d4-a716-446655440000/cancel",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "sync", "jobs", "550e8400-e29b-41d4-a716-446655440000", "cancel"]
             }
@@ -1084,9 +1084,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/sync/errors/550e8400-e29b-41d4-a716-446655440000",
+              "raw": "http://192.168.40.197:3001/api/sync/errors/550e8400-e29b-41d4-a716-446655440000",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "sync", "errors", "550e8400-e29b-41d4-a716-446655440000"]
             }
@@ -1104,9 +1104,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/datasources",
+              "raw": "http://192.168.40.197:3001/api/datasources",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "datasources"]
             }
@@ -1118,9 +1118,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/datasources/550e8400-e29b-41d4-a716-446655440000",
+              "raw": "http://192.168.40.197:3001/api/datasources/550e8400-e29b-41d4-a716-446655440000",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "datasources", "550e8400-e29b-41d4-a716-446655440000"]
             }
@@ -1141,9 +1141,9 @@
               "raw": "{\n  \"name\": \"Mi Datasource\",\n  \"type\": \"postgresql\",\n  \"connectionConfig\": {\n    \"host\": \"localhost\",\n    \"port\": 5432,\n    \"username\": \"usuario\",\n    \"password\": \"contraseña\",\n    \"database\": \"midb\"\n  },\n  \"queryTemplate\": \"SELECT id, nombre, descripcion FROM productos\",\n  \"idField\": \"id\",\n  \"embeddingFields\": [\"nombre\", \"descripcion\"],\n  \"qdrantCollection\": \"catalogo_nuevo\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/datasources",
+              "raw": "http://192.168.40.197:3001/api/datasources",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "datasources"]
             }
@@ -1161,9 +1161,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/health",
+              "raw": "http://192.168.40.197:3001/api/health",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "health"]
             }
@@ -1175,9 +1175,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/health/qdrant",
+              "raw": "http://192.168.40.197:3001/api/health/qdrant",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "health", "qdrant"]
             }
@@ -1189,9 +1189,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/health/database",
+              "raw": "http://192.168.40.197:3001/api/health/database",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "health", "database"]
             }
@@ -1203,9 +1203,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3001/api/health/redis",
+              "raw": "http://192.168.40.197:3001/api/health/redis",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "health", "redis"]
             }
@@ -1229,12 +1229,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -1252,12 +1252,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\"\n}"
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\"\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -1275,12 +1275,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gt\": 1 }\n  }\n}"
+              "raw": "{\n  \"query\": \"pegamento adhesivo\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 10,\n  \"marca\": \"LOCTITE\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gt\": 1 }\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -1298,12 +1298,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"martillo cincel destornillador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 },\n    \"en_stock\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"martillo cincel destornillador\",\n  \"collections\": [\"catalogo_efc\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 },\n    \"en_stock\": true\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
@@ -1321,12 +1321,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"llave herramienta\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 20,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"llave herramienta\",\n  \"collections\": [\"catalogo_efc\", \"catalogo_stock\"],\n  \"limit\": 20,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:3001/api/search/text",
+              "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": ["192.168.40.197"],
               "port": "3001",
               "path": ["api", "search", "text"]
             }
