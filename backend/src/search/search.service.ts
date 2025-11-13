@@ -316,11 +316,26 @@ export class SearchService {
         }
       } else {
         // Handle simple equality filters: true, false, string value
-        qdrantFilter.must.push({
-          [actualField]: condition
-        });
-
-        this.logger.debug(`Applied equality filter: ${actualField} = ${condition}`);
+        // For Qdrant payload filters, use key-match structure for proper keyword matching
+        if (typeof condition === 'boolean') {
+          // Boolean values
+          qdrantFilter.must.push({
+            key: actualField,
+            match: {
+              value: condition
+            }
+          });
+          this.logger.debug(`Applied boolean filter: ${actualField} = ${condition}`);
+        } else {
+          // String values - use value for exact matching
+          qdrantFilter.must.push({
+            key: actualField,
+            match: {
+              value: condition
+            }
+          });
+          this.logger.debug(`Applied string filter: ${actualField} = ${condition}`);
+        }
       }
     }
 

@@ -443,9 +443,8 @@ export class QdrantService {
 
       return {
         id: point.id,
-        score: point.score || 'N/A',
         payload: point.payload || {},
-        vector_size: point.vector ? point.vector.length : 0,
+        vector_size: point.vector ? (Array.isArray(point.vector) ? point.vector.length : 0) : 0,
       };
     } catch (error) {
       this.logger.error(`Failed to retrieve point ${pointId}: ${error.message}`);

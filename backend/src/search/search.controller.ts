@@ -24,6 +24,33 @@ export class SearchController {
     private readonly qdrantService: QdrantService,
   ) {}
 
+  @Get('product/:collection/:productId')
+  async getProductPayload(
+    @Param('collection') collection: string,
+    @Param('productId') productId: string,
+  ) {
+    if (!collection) {
+      throw new BadRequestException('Collection name is required');
+    }
+
+    if (!productId) {
+      throw new BadRequestException('Product ID is required');
+    }
+
+    const product = await this.qdrantService.getPointById(collection, productId);
+
+    if (!product) {
+      throw new BadRequestException(`Product ${productId} not found in collection ${collection}`);
+    }
+
+    return {
+      collection,
+      productId,
+      ...product,
+      payload_fields: product.payload ? Object.keys(product.payload) : [],
+    };
+  }
+
   @Post('text')
   async searchByText(@Body() dto: SearchByTextDto) {
     if (!dto.query) {
@@ -44,21 +71,6 @@ export class SearchController {
       dto.useLLMFilter || false, // Optional LLM filter (default: OFF - trust embeddings)
       dto.payloadFilters, // Optional payload filters for explicit field constraints
     );
-  }
-
-  @Sse('internet')
-  searchInternet(@Query('query') query: string, @Query('collections') collections: string): Observable<MessageEvent> {
-    if (!query) {
-      throw new BadRequestException('Query text is required');
-    }
-
-    if (!collections) {
-      throw new BadRequestException('Collections are required');
-    }
-
-    const collectionArray = collections.split(',');
-
-    return this.searchService.searchInternetStream(query, collectionArray);
   }
 
   @Post('image')
@@ -140,30 +152,19 @@ export class SearchController {
     );
   }
 
-  @Get('product/:collection/:productId')
-  async getProductPayload(
-    @Param('collection') collection: string,
-    @Param('productId') productId: string,
-  ) {
-    if (!collection) {
-      throw new BadRequestException('Collection name is required');
+  @Sse('internet')
+  searchInternet(@Query('query') query: string, @Query('collections') collections: string): Observable<MessageEvent> {
+    if (!query) {
+      throw new BadRequestException('Query text is required');
     }
 
-    if (!productId) {
-      throw new BadRequestException('Product ID is required');
+    if (!collections) {
+      throw new BadRequestException('Collections are required');
     }
 
-    const product = await this.qdrantService.getPointById(collection, productId);
+    const collectionArray = collections.split(',');
 
-    if (!product) {
-      throw new BadRequestException(`Product ${productId} not found in collection ${collection}`);
-    }
-
-    return {
-      collection,
-      productId,
-      ...product,
-      payload_fields: product.payload ? Object.keys(product.payload) : [],
-    };
+    return this.searchService.searchInternetStream(query, collectionArray);
   }
+
 }
