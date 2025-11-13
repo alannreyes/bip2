@@ -1,22 +1,28 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
   Query,
+  Param,
   Sse,
   MessageEvent,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SearchService } from './search.service';
 import { SearchByTextDto } from './dto/search-by-text.dto';
+import { QdrantService } from '../qdrant/qdrant.service';
 import { Observable } from 'rxjs';
 
 @Controller('search')
 export class SearchController {
-  constructor(private readonly searchService: SearchService) {}
+  constructor(
+    private readonly searchService: SearchService,
+    private readonly qdrantService: QdrantService,
+  ) {}
 
   @Post('text')
   async searchByText(@Body() dto: SearchByTextDto) {
@@ -132,5 +138,32 @@ export class SearchController {
       dto.collections,
       dto.limit || 20,
     );
+  }
+
+  @Get('product/:collection/:productId')
+  async getProductPayload(
+    @Param('collection') collection: string,
+    @Param('productId') productId: string,
+  ) {
+    if (!collection) {
+      throw new BadRequestException('Collection name is required');
+    }
+
+    if (!productId) {
+      throw new BadRequestException('Product ID is required');
+    }
+
+    const product = await this.qdrantService.getPointById(collection, productId);
+
+    if (!product) {
+      throw new BadRequestException(`Product ${productId} not found in collection ${collection}`);
+    }
+
+    return {
+      collection,
+      productId,
+      ...product,
+      payload_fields: product.payload ? Object.keys(product.payload) : [],
+    };
   }
 }

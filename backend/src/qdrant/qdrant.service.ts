@@ -411,6 +411,48 @@ export class QdrantService {
     }
   }
 
+  /**
+   * Get a single point (product) by ID from a collection with all its payload fields
+   * Useful for seeing all available payload fields and their values
+   */
+  async getPointById(
+    collectionName: string,
+    pointId: string,
+    qdrantHost?: string,
+    qdrantPort?: number,
+  ): Promise<any> {
+    try {
+      const client = this.getClientForDatasource(qdrantHost, qdrantPort);
+
+      this.logger.debug(`Retrieving point ${pointId} from collection ${collectionName}`);
+
+      // Retrieve the point with all payload data
+      const result = await client.retrieve(collectionName, {
+        ids: [pointId],
+        with_payload: true,
+      });
+
+      if (!result || result.length === 0) {
+        this.logger.warn(`Point ${pointId} not found in collection ${collectionName}`);
+        return null;
+      }
+
+      const point = result[0];
+
+      this.logger.log(`Retrieved point ${pointId} from ${collectionName} successfully`);
+
+      return {
+        id: point.id,
+        score: point.score || 'N/A',
+        payload: point.payload || {},
+        vector_size: point.vector ? point.vector.length : 0,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to retrieve point ${pointId}: ${error.message}`);
+      throw new BadRequestException(`Failed to retrieve point: ${error.message}`);
+    }
+  }
+
   getClient(): QdrantClient {
     return this.client;
   }
