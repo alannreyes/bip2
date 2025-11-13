@@ -29,7 +29,14 @@ export class SearchService {
     const startTime = Date.now();
 
     try {
-      // Step 1: Extract keywords from query for hybrid boosting (attention mechanism)
+      // Step 1: Convert marca parameter to payload filter for hard filtering
+      if (marca && (!payloadFilters || !payloadFilters['marca'])) {
+        payloadFilters = payloadFilters || {};
+        payloadFilters['marca'] = marca;
+        this.logger.log(`Converting marca parameter to payload filter: ${marca}`);
+      }
+
+      // Step 2: Extract keywords from query for hybrid boosting (attention mechanism)
       // If marca filter is provided, append to query for better semantic search
       let enhancedQuery = query;
       const keywords = this.extractKeywords(query);
@@ -51,17 +58,17 @@ export class SearchService {
         `regular: [${keywords.regular.join(', ')}]`
       );
 
-      // Step 2: Build attention-based query structure using enhanced query
+      // Step 3: Build attention-based query structure using enhanced query
       const attentionQuery = this.buildAttentionQuery(enhancedQuery, keywords);
 
-      // Step 3: Build Qdrant filter for hybrid search (includes payload filters)
+      // Step 4: Build Qdrant filter for hybrid search (includes payload filters)
       const qdrantFilter = this.buildQdrantFilter(keywords, payloadFilters);
 
-      // Step 4: Generate embedding from attention-structured query
+      // Step 5: Generate embedding from attention-structured query
       this.logger.debug('Generating embedding from attention query...');
       const embedding = await this.geminiService.generateEmbedding(attentionQuery);
 
-      // Step 5: Search in Qdrant with filters (hybrid search)
+      // Step 7: Search in Qdrant with filters (hybrid search)
       // If no filters, fetch more results for re-ranking (3x instead of 2x)
       // If marca or cliente filter is active, multiply by 10x to ensure enough results after filtering
       const FILTER_MULTIPLIER = 10;
@@ -77,11 +84,11 @@ export class SearchService {
       this.logger.debug(`Searching in Qdrant collection: ${collectionName} (limit: ${searchLimit})${qdrantFilter ? ' with filters' : ' without filters'}`);
       const searchResults = await this.qdrantService.search(collectionName, embedding, searchLimit, qdrantFilter);
 
-      // Step 6: Re-rank results using hybrid scoring
+      // Step 8: Re-rank results using hybrid scoring
       this.logger.debug('Re-ranking results with keyword boosting...');
       const reRankedResults = this.reRankResults(searchResults, keywords);
 
-      // Step 7: LLM Semantic Filter - OPTIONAL (disabled by default to trust embeddings)
+      // Step 9: LLM Semantic Filter - OPTIONAL (disabled by default to trust embeddings)
       let semanticallyFiltered: any[];
 
       if (useLLMFilter) {
@@ -147,10 +154,10 @@ export class SearchService {
         semanticallyFiltered = reRankedResults;
       }
 
-      // Step 8: Trim to requested limit (or keep all if cliente filter will be applied)
+      // Step 10: Trim to requested limit (or keep all if cliente filter will be applied)
       let finalResults = cliente ? semanticallyFiltered : semanticallyFiltered.slice(0, limit);
 
-      // Step 9: Enrich with client purchase data if cliente filter is provided
+      // Step 11: Enrich with client purchase data if cliente filter is provided
       let clientDataStatus = 'not_requested'; // 'not_requested' | 'success' | 'no_data' | 'error'
       let clientDataError = null;
 
@@ -164,7 +171,7 @@ export class SearchService {
           const hasClientData = enrichedResults.some(r => r._vendido_a_cliente === true);
 
           if (hasClientData) {
-            // Step 10: Filter to show ONLY products sold to this client
+            // Step 12: Filter to show ONLY products sold to this client
             const beforeFilterCount = enrichedResults.length;
             finalResults = enrichedResults.filter(r => r._vendido_a_cliente === true);
             this.logger.log(`Filtered from ${beforeFilterCount} to ${finalResults.length} products sold to client ${cliente}`);
@@ -247,20 +254,32 @@ export class SearchService {
   ): any {
     // If no custom payload filters provided, trust vector search 100%
     if (!payloadFilters || Object.keys(payloadFilters).length === 0) {
-      this.logger.debug('NO custom filters applied - trusting vector search + re-ranking completely');
+      this.logger.log('NO custom filters applied - trusting vector search + re-ranking completely');
       return null;
     }
 
+    this.logger.log(`buildQdrantFilter called with payloadFilters: ${JSON.stringify(payloadFilters)}`);
+
     // Build Qdrant filter from payload constraints
-    // Convert common field names to actual payload field names
+    // Convert common field names to actual payload field names from catalogo_efc
     const fieldMapping: { [key: string]: string } = {
-      'ventas_3_anios': 'ventas_3_anios',
-      'Cantidad_Ventas_Ultimos_3_Anios': 'ventas_3_anios',
-      'en_stock': 'en_stock',
-      'stock': 'en_stock',
-      'precio_lista': 'precio_lista',
-      'fecha_ultima_venta': 'fecha_ultima_venta',
-      'ultima_venta': 'fecha_ultima_venta',
+      // Ventas / Sales
+      'ventas_3_anios': 'Cantidad_Ventas_Ultimos_3_Anios',
+      'Cantidad_Ventas_Ultimos_3_Anios': 'Cantidad_Ventas_Ultimos_3_Anios',
+      // Stock / Inventory
+      'en_stock': 'Articulo_De_Stock',
+      'stock': 'Articulo_De_Stock',
+      'Articulo_De_Stock': 'Articulo_De_Stock',
+      // Brand / Marca
+      'marca': 'Marca_Descripcion',
+      'Marca_Descripcion': 'Marca_Descripcion',
+      // Family / Familia
+      'familia': 'Familia_Descripcion',
+      'Familia_Descripcion': 'Familia_Descripcion',
+      // Last sale
+      'precio_lista': 'Articulo_Lista_Costo',
+      'fecha_ultima_venta': 'Fecha_Ultima_Venta',
+      'ultima_venta': 'Fecha_Ultima_Venta',
     };
 
     const qdrantFilter: any = {
