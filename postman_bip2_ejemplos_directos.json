@@ -26,9 +26,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -49,9 +58,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -72,9 +90,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         }
@@ -100,9 +127,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -123,9 +159,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -146,9 +191,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         }
@@ -174,9 +228,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -197,9 +260,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -220,9 +292,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         }
@@ -248,9 +329,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -271,9 +361,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -294,9 +393,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -317,9 +425,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -340,9 +457,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -363,9 +489,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         }
@@ -391,9 +526,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -414,9 +558,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -437,9 +590,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         }
@@ -465,9 +627,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -488,9 +659,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -511,9 +691,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         }
@@ -539,9 +728,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -562,9 +760,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         }
@@ -590,9 +797,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         },
@@ -613,9 +829,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/search/text",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "search", "text"]
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
             }
           }
         }
@@ -632,9 +857,17 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/health",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "health"]
+              "path": [
+                "api",
+                "health"
+              ]
             }
           }
         },
@@ -646,9 +879,17 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/datasources",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "datasources"]
+              "path": [
+                "api",
+                "datasources"
+              ]
             }
           }
         },
@@ -660,9 +901,18 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/sync/jobs",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "sync", "jobs"]
+              "path": [
+                "api",
+                "sync",
+                "jobs"
+              ]
             }
           }
         },
@@ -674,13 +924,81 @@
             "url": {
               "raw": "http://192.168.40.197:3001/api/sync/jobs/6fdada6e-dccf-4bfa-9d65-1d54234f2513",
               "protocol": "http",
-              "host": ["192", "168", "40", "197"],
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
               "port": "3001",
-              "path": ["api", "sync", "jobs", "6fdada6e-dccf-4bfa-9d65-1d54234f2513"]
+              "path": [
+                "api",
+                "sync",
+                "jobs",
+                "6fdada6e-dccf-4bfa-9d65-1d54234f2513"
+              ]
             }
           }
         }
       ]
+    },
+    {
+      "name": "🔍 VER TODOS LOS PAYLOADS DE UN PRODUCTO",
+      "item": [
+        {
+          "name": "Obtener payloads de un producto EFC",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/product/catalogo_efc_200k/ALM_FT10",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "product",
+                "catalogo_efc_200k",
+                "ALM_FT10"
+              ]
+            }
+          },
+          "description": "Reemplaza ALM_FT10 con el ID del producto que quieras ver"
+        },
+        {
+          "name": "Obtener payloads de un producto Stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/product/catalogo_stock/PROD-001",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "product",
+                "catalogo_stock",
+                "PROD-001"
+              ]
+            }
+          },
+          "description": "Reemplaza PROD-001 con el ID del producto que quieras ver"
+        }
+      ],
+      "description": "Endpoints para ver TODOS los campos (payloads) de un producto individual. Útil para descubrir qué datos tienes disponible para filtrar."
     }
   ]
 }
