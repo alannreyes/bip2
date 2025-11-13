@@ -1,0 +1,947 @@
+{
+  "info": {
+    "name": "BIP2 - Sistema de Búsqueda Inteligente de Productos (Completa)",
+    "description": "Colección exhaustiva de endpoints para BIP2 con ejemplos reales basados en clientes y productos específicos del catálogo de productos industriales",
+    "version": "3.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.40.197:3001/api",
+      "type": "string"
+    },
+    {
+      "key": "datasourceId_efc",
+      "value": "8c69c615-96fb-46bd-bc5b-6a9fcbc38a0b",
+      "type": "string"
+    },
+    {
+      "key": "datasourceName_efc",
+      "value": "catalogo_efc",
+      "type": "string"
+    },
+    {
+      "key": "collection_efc",
+      "value": "catalogo_efc",
+      "type": "string"
+    },
+    {
+      "key": "datasourceId_stock",
+      "value": "0f647a20-8c25-404f-90d9-60dcd7ca1789",
+      "type": "string"
+    },
+    {
+      "key": "datasourceName_stock",
+      "value": "catalogo_stock",
+      "type": "string"
+    },
+    {
+      "key": "collection_stock",
+      "value": "catalogo_stock",
+      "type": "string"
+    },
+    {
+      "key": "cliente_honeywell",
+      "value": "000106",
+      "type": "string"
+    },
+    {
+      "key": "cliente_loctite",
+      "value": "003592",
+      "type": "string"
+    },
+    {
+      "key": "cliente_pilot_faber",
+      "value": "004401",
+      "type": "string"
+    },
+    {
+      "key": "cliente_agua",
+      "value": "000633",
+      "type": "string"
+    },
+    {
+      "key": "marca_honeywell",
+      "value": "HONEYWELL",
+      "type": "string"
+    },
+    {
+      "key": "marca_loctite",
+      "value": "LOCTITE",
+      "type": "string"
+    },
+    {
+      "key": "marca_pilot",
+      "value": "PILOT",
+      "type": "string"
+    },
+    {
+      "key": "marca_faber",
+      "value": "FABER CASTELL",
+      "type": "string"
+    },
+    {
+      "key": "marca_tumi",
+      "value": "TUMI",
+      "type": "string"
+    },
+    {
+      "key": "marca_ove",
+      "value": "OVE",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health & Status",
+      "item": [
+        {
+          "name": "Health Check Completo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verificar estado general de todos los servicios del sistema"
+          }
+        },
+        {
+          "name": "Health Check Database",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/database",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "database"]
+            },
+            "description": "Verificar PostgreSQL donde se almacenan datasources y jobs"
+          }
+        },
+        {
+          "name": "Health Check Qdrant (Vector DB)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/qdrant",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "qdrant"]
+            },
+            "description": "Verificar Qdrant donde se almacenan embeddings vectoriales de productos"
+          }
+        },
+        {
+          "name": "Health Check Redis (Cache & Queue)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/redis",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "redis"]
+            },
+            "description": "Verificar Redis para Bull Queue (procesamiento de sincronización)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Datasources (Fuentes de Datos)",
+      "item": [
+        {
+          "name": "Listar Todas las Datasources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources"]
+            },
+            "description": "Obtener lista completa de fuentes de datos configuradas (catalogo_efc y catalogo_stock)"
+          }
+        },
+        {
+          "name": "Obtener Datasource - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId_efc}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId_efc}}"]
+            },
+            "description": "Obtener detalles completos de catalogo_efc (MSSQL EFC_DB_PROD)"
+          }
+        },
+        {
+          "name": "Obtener Datasource - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId_stock}}"]
+            },
+            "description": "Obtener detalles completos de catalogo_stock"
+          }
+        },
+        {
+          "name": "Preview Datos - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId_efc}}/preview?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId_efc}}", "preview"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Ver muestra de 10 productos del catálogo"
+          }
+        },
+        {
+          "name": "Preview Datos - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/datasources/{{datasourceId_stock}}/preview?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["datasources", "{{datasourceId_stock}}", "preview"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Ver muestra de productos en stock"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗂️ Collections (Colecciones Qdrant)",
+      "item": [
+        {
+          "name": "Listar Todas las Colecciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections"]
+            },
+            "description": "Obtener todas las colecciones de vectores disponibles"
+          }
+        },
+        {
+          "name": "Info Detallada - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collection_efc}}/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collection_efc}}", "info"]
+            },
+            "description": "Obtener estadísticas detalladas de catalogo_efc (total de puntos vectoriales, dimensiones, etc)"
+          }
+        },
+        {
+          "name": "Info Detallada - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/collections/{{collection_stock}}/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["collections", "{{collection_stock}}", "info"]
+            },
+            "description": "Obtener estadísticas detalladas de catalogo_stock"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Sincronización (Sync Jobs)",
+      "item": [
+        {
+          "name": "Listar Jobs - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs?datasourceId={{datasourceId_efc}}&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"],
+              "query": [
+                {
+                  "key": "datasourceId",
+                  "value": "{{datasourceId_efc}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Obtener últimos 20 jobs de sincronización de catalogo_efc"
+          }
+        },
+        {
+          "name": "Listar Jobs - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs?datasourceId={{datasourceId_stock}}&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs"],
+              "query": [
+                {
+                  "key": "datasourceId",
+                  "value": "{{datasourceId_stock}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Obtener últimos 20 jobs de sincronización de catalogo_stock"
+          }
+        },
+        {
+          "name": "Obtener Job Específico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/jobs/job-id-aqui",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "jobs", "job-id-aqui"]
+            },
+            "description": "Obtener detalles completos de un job específico (reemplazar job-id-aqui con ID real)"
+          }
+        },
+        {
+          "name": "Sincronización Completa - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/full/{{datasourceId_efc}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "full", "{{datasourceId_efc}}"]
+            },
+            "description": "Iniciar sincronización completa de todos los productos de catalogo_efc desde la BD MSSQL"
+          }
+        },
+        {
+          "name": "Sincronización Completa - catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/full/{{datasourceId_stock}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "full", "{{datasourceId_stock}}"]
+            },
+            "description": "Iniciar sincronización completa de todos los productos de catalogo_stock"
+          }
+        },
+        {
+          "name": "Sincronización Incremental - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/incremental/{{datasourceId_efc}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "incremental", "{{datasourceId_efc}}"]
+            },
+            "description": "Sincronización incremental - solo productos modificados desde última sincronización"
+          }
+        },
+        {
+          "name": "Obtener Errores de Job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/errors/job-id-aqui",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "errors", "job-id-aqui"]
+            },
+            "description": "Obtener lista de registros que fallaron en un job específico"
+          }
+        },
+        {
+          "name": "Reintentar Errores de Job",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sync/errors/job-id-aqui/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["sync", "errors", "job-id-aqui", "retry"]
+            },
+            "description": "Reintentar procesar los registros que fallaron en un job"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Búsqueda por Texto",
+      "item": [
+        {
+          "name": "Búsqueda Simple - Cliente HONEYWELL (000106)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"{{collection_efc}}\"],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda simple de 'lentes de seguridad' sin filtros. Encontrará productos como: LENTES DE SEGURIDAD MODELO GENESIS HONEYWELL"
+          }
+        },
+        {
+          "name": "Búsqueda por Cliente - HONEYWELL (000106)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes seguridad genesis\",\n  \"collections\": [\"{{collection_efc}}\"],\n  \"limit\": 5,\n  \"cliente\": \"{{cliente_honeywell}}\",\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda filtrada por cliente HONEYWELL (000106) - solo productos vendidos a este cliente"
+          }
+        },
+        {
+          "name": "Búsqueda por Marca - PILOT (Cliente 004401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"boligrafo pilot\",\n  \"collections\": [\"{{collection_efc}}\"],\n  \"limit\": 8,\n  \"cliente\": \"{{cliente_pilot_faber}}\",\n  \"marca\": \"{{marca_pilot}}\",\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda con filtro de cliente (004401) Y marca (PILOT). Encontrará: BOLIGRAFO BL-G2-5 CON GRIP RETRACTIL NEGRO PILOT, LAPICERO TINTA FINA BPS-FINE AZUL PILOT, etc"
+          }
+        },
+        {
+          "name": "Búsqueda por Marca - LOCTITE (Cliente 003592)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"adhesivo super bonder\",\n  \"collections\": [\"{{collection_efc}}\"],\n  \"limit\": 5,\n  \"cliente\": \"{{cliente_loctite}}\",\n  \"marca\": \"{{marca_loctite}}\",\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda de adhesivos LOCTITE para cliente 003592. Encontrará: ADHESIVO SUPER BONDER 495"
+          }
+        },
+        {
+          "name": "Búsqueda con LLM Filter Activado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"marcadores indelebles\",\n  \"collections\": [\"{{collection_efc}}\"],\n  \"limit\": 10,\n  \"cliente\": \"{{cliente_pilot_faber}}\",\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda con LLM Filter ACTIVADO - el modelo de IA inteligente refina los resultados según relevancia semántica. Busca marcadores/plumones para cliente 004401"
+          }
+        },
+        {
+          "name": "Búsqueda con Internet Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes protección genesis honeywell\",\n  \"collections\": [\"{{collection_efc}}\"],\n  \"limit\": 15,\n  \"cliente\": \"{{cliente_honeywell}}\",\n  \"includeInternetSearch\": true,\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda completa: filtra por cliente + marca, activa búsqueda en internet, y aplica LLM filter para mejor relevancia. Combina resultados internos y externos"
+          }
+        },
+        {
+          "name": "Búsqueda Multi-Datasource",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"productos\",\n  \"collections\": [\"{{collection_efc}}\", \"{{collection_stock}}\"],\n  \"limit\": 20,\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda simultánea en ambos datasources: catalogo_efc y catalogo_stock"
+          }
+        },
+        {
+          "name": "Búsqueda - Papel Fotocopia Cliente Papelería (004401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"papel fotocopia A4\",\n  \"collections\": [\"{{collection_efc}}\"],\n  \"limit\": 5,\n  \"cliente\": \"{{cliente_pilot_faber}}\",\n  \"useLLMFilter\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "text"]
+            },
+            "description": "Búsqueda de papel fotocopia para cliente 004401. Encontrará: PAPEL FOTOCOPIA A4 75GRM PQT X 500HJS"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📸 Búsqueda por Imagen",
+      "item": [
+        {
+          "name": "Búsqueda por Imagen - catalogo_efc",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/image?collection={{collection_efc}}&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "image"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collection_efc}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Subir imagen de un producto para encontrar similares en catalogo_efc"
+          }
+        },
+        {
+          "name": "Búsqueda por Imagen - catalogo_stock",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/image?collection={{collection_stock}}&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "image"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collection_stock}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Subir imagen de un producto para encontrar similares en catalogo_stock"
+          }
+        }
+      ]
+    },
+    {
+      "name": "💡 Recomendaciones (Basadas en Productos)",
+      "item": [
+        {
+          "name": "Recomendaciones - Basado en Lentes HONEYWELL (Cliente 000106)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"positiveIds\": [\"41010584\"],\n  \"negativeIds\": [],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/recommend",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommend"]
+            },
+            "description": "Recomendaciones basadas en el producto LENTES DE SEGURIDAD HONEYWELL (ID: 41010584). Encontrará productos similares que este cliente también podría comprar"
+          }
+        },
+        {
+          "name": "Recomendaciones - Basado en Bolígrafos PILOT (Cliente 004401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"positiveIds\": [\"A0011920\", \"26021134\"],\n  \"negativeIds\": [],\n  \"limit\": 8\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/recommend",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommend"]
+            },
+            "description": "Recomendaciones basadas en dos productos PILOT (bolígrafos). Sistema encuentra productos complementarios"
+          }
+        },
+        {
+          "name": "Recomendaciones - PILOT Pero Excluye Lápices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"positiveIds\": [\"A0011920\"],\n  \"negativeIds\": [\"26020017\"],\n  \"limit\": 8\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/recommend",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommend"]
+            },
+            "description": "Recomendaciones avanzadas: positivos (productos a recomendar similar) + negativos (productos a EXCLUIR de resultados)"
+          }
+        },
+        {
+          "name": "Recomendaciones - Basado en Adhesivo LOCTITE (Cliente 003592)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"positiveIds\": [\"LOCTITE-495\"],\n  \"negativeIds\": [],\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/recommend",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "recommend"]
+            },
+            "description": "Recomendaciones basadas en adhesivos LOCTITE. Útil para sugerir productos relacionados al cliente 003592"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Detección de Duplicados",
+      "item": [
+        {
+          "name": "Detectar Duplicados - catalogo_efc (Completo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"similarityThreshold\": 0.85,\n  \"limit\": 50,\n  \"useAiClassification\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar productos duplicados en toda la colección catalogo_efc. Usa IA para clasificar duplicados verdaderos vs. similares"
+          }
+        },
+        {
+          "name": "Detectar Duplicados - Cliente Específico (000106 HONEYWELL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"similarityThreshold\": 0.80,\n  \"limit\": 30,\n  \"useAiClassification\": true,\n  \"filters\": {\n    \"cliente\": \"000106\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar duplicados solo en productos vendidos al cliente HONEYWELL (000106)"
+          }
+        },
+        {
+          "name": "Detectar Duplicados - Marca PILOT (Cliente 004401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"similarityThreshold\": 0.90,\n  \"limit\": 25,\n  \"useAiClassification\": false,\n  \"filters\": {\n    \"cliente\": \"004401\",\n    \"marca\": \"PILOT\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar duplicados en bolígrafos PILOT vendidos a cliente 004401"
+          }
+        },
+        {
+          "name": "Detectar Duplicados - Marca FABER CASTELL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"similarityThreshold\": 0.85,\n  \"limit\": 20,\n  \"useAiClassification\": true,\n  \"filters\": {\n    \"marca\": \"FABER CASTELL\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "detect"]
+            },
+            "description": "Detectar duplicados en todos los productos FABER CASTELL"
+          }
+        },
+        {
+          "name": "Reporte Completo de Duplicados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/report?collection={{collection_efc}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "report"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collection_efc}}"
+                }
+              ]
+            },
+            "description": "Obtener reporte completo de duplicados encontrados en catalogo_efc"
+          }
+        },
+        {
+          "name": "Valores Disponibles para Filtros",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/filter-values?collection={{collection_efc}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "filter-values"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "{{collection_efc}}"
+                }
+              ]
+            },
+            "description": "Obtener lista de clientes, marcas y otros valores disponibles para filtrar duplicados"
+          }
+        },
+        {
+          "name": "Analizar Producto Específico - Lentes HONEYWELL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"productId\": \"41010584\",\n  \"similarityThreshold\": 0.85\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/analyze-product",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "analyze-product"]
+            },
+            "description": "Análisis detallado de duplicados del producto LENTES DE SEGURIDAD HONEYWELL GENESIS"
+          }
+        },
+        {
+          "name": "Analizar Producto Específico - Bolígrafo PILOT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"{{collection_efc}}\",\n  \"productId\": \"A0011920\",\n  \"similarityThreshold\": 0.80\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/duplicates/analyze-product",
+              "host": ["{{baseUrl}}"],
+              "path": ["duplicates", "analyze-product"]
+            },
+            "description": "Análisis de duplicados del bolígrafo PILOT BL-G2-5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📝 Notas de Implementación",
+      "item": [
+        {
+          "name": "CLIENTES EN EL SISTEMA",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "**Clientes principales en catalogo_efc:**\n\n- **000106** (HONEYWELL): Compra artículos de seguridad\n  - Productos: Lentes de seguridad HONEYWELL GENESIS, barras retráctiles\n  - Marcas: HONEYWELL, UVEX\n\n- **000633** (Agua/Bebidas): Distribuidor de agua\n  - Productos: Agua mineral S/GAS\n  - Marcas: SAN LUIS\n\n- **003592** (Industrial): Compra adhesivos y herramientas\n  - Productos: Adhesivos LOCTITE 495, brochas TUMI\n  - Marcas: LOCTITE, TUMI\n\n- **004401** (Papelería/Oficina): Proveedor de artículos de oficina\n  - Productos: Papel fotocopia A4, plumones FABER CASTELL, bolígrafos PILOT\n  - Marcas: REPORT, FABER CASTELL, PILOT, OVE\n\n**Parámetros clave para búsquedas:**\n- useLLMFilter: true = IA refina resultados | false = búsqueda vectorial pura\n- includeInternetSearch: true = busca también en internet\n- similarityThreshold: 0.80-0.90 = qué tan similares deben ser los duplicados\n- filters: filtrar por cliente y/o marca"
+          }
+        }
+      ]
+    }
+  ]
+}
