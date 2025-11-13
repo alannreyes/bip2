@@ -103,8 +103,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
             },
             "description": "Verificar estado general de todos los servicios del sistema"
           }
@@ -116,8 +120,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/database",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "database"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "database"
+              ]
             },
             "description": "Verificar PostgreSQL donde se almacenan datasources y jobs"
           }
@@ -129,8 +138,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/qdrant",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "qdrant"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "qdrant"
+              ]
             },
             "description": "Verificar Qdrant donde se almacenan embeddings vectoriales de productos"
           }
@@ -142,8 +156,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/redis",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "redis"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "redis"
+              ]
             },
             "description": "Verificar Redis para Bull Queue (procesamiento de sincronización)"
           }
@@ -160,8 +179,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/datasources",
-              "host": ["{{baseUrl}}"],
-              "path": ["datasources"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "datasources"
+              ]
             },
             "description": "Obtener lista completa de fuentes de datos configuradas (catalogo_efc y catalogo_stock)"
           }
@@ -173,8 +196,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/datasources/{{datasourceId_efc}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["datasources", "{{datasourceId_efc}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "datasources",
+                "{{datasourceId_efc}}"
+              ]
             },
             "description": "Obtener detalles completos de catalogo_efc (MSSQL EFC_DB_PROD)"
           }
@@ -186,8 +214,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/datasources/{{datasourceId_stock}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["datasources", "{{datasourceId_stock}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "datasources",
+                "{{datasourceId_stock}}"
+              ]
             },
             "description": "Obtener detalles completos de catalogo_stock"
           }
@@ -199,8 +232,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/datasources/{{datasourceId_efc}}/preview?limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["datasources", "{{datasourceId_efc}}", "preview"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "datasources",
+                "{{datasourceId_efc}}",
+                "preview"
+              ],
               "query": [
                 {
                   "key": "limit",
@@ -218,8 +257,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/datasources/{{datasourceId_stock}}/preview?limit=5",
-              "host": ["{{baseUrl}}"],
-              "path": ["datasources", "{{datasourceId_stock}}", "preview"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "datasources",
+                "{{datasourceId_stock}}",
+                "preview"
+              ],
               "query": [
                 {
                   "key": "limit",
@@ -242,8 +287,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/collections",
-              "host": ["{{baseUrl}}"],
-              "path": ["collections"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "collections"
+              ]
             },
             "description": "Obtener todas las colecciones de vectores disponibles"
           }
@@ -255,8 +304,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/collections/{{collection_efc}}/info",
-              "host": ["{{baseUrl}}"],
-              "path": ["collections", "{{collection_efc}}", "info"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "collections",
+                "{{collection_efc}}",
+                "info"
+              ]
             },
             "description": "Obtener estadísticas detalladas de catalogo_efc (total de puntos vectoriales, dimensiones, etc)"
           }
@@ -268,8 +323,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/collections/{{collection_stock}}/info",
-              "host": ["{{baseUrl}}"],
-              "path": ["collections", "{{collection_stock}}", "info"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "collections",
+                "{{collection_stock}}",
+                "info"
+              ]
             },
             "description": "Obtener estadísticas detalladas de catalogo_stock"
           }
@@ -286,8 +347,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/sync/jobs?datasourceId={{datasourceId_efc}}&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["sync", "jobs"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sync",
+                "jobs"
+              ],
               "query": [
                 {
                   "key": "datasourceId",
@@ -309,8 +375,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/sync/jobs?datasourceId={{datasourceId_stock}}&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["sync", "jobs"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sync",
+                "jobs"
+              ],
               "query": [
                 {
                   "key": "datasourceId",
@@ -332,8 +403,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/sync/jobs/job-id-aqui",
-              "host": ["{{baseUrl}}"],
-              "path": ["sync", "jobs", "job-id-aqui"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sync",
+                "jobs",
+                "job-id-aqui"
+              ]
             },
             "description": "Obtener detalles completos de un job específico (reemplazar job-id-aqui con ID real)"
           }
@@ -345,8 +422,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/sync/full/{{datasourceId_efc}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["sync", "full", "{{datasourceId_efc}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sync",
+                "full",
+                "{{datasourceId_efc}}"
+              ]
             },
             "description": "Iniciar sincronización completa de todos los productos de catalogo_efc desde la BD MSSQL"
           }
@@ -358,8 +441,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/sync/full/{{datasourceId_stock}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["sync", "full", "{{datasourceId_stock}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sync",
+                "full",
+                "{{datasourceId_stock}}"
+              ]
             },
             "description": "Iniciar sincronización completa de todos los productos de catalogo_stock"
           }
@@ -371,8 +460,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/sync/incremental/{{datasourceId_efc}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["sync", "incremental", "{{datasourceId_efc}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sync",
+                "incremental",
+                "{{datasourceId_efc}}"
+              ]
             },
             "description": "Sincronización incremental - solo productos modificados desde última sincronización"
           }
@@ -384,8 +479,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/sync/errors/job-id-aqui",
-              "host": ["{{baseUrl}}"],
-              "path": ["sync", "errors", "job-id-aqui"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sync",
+                "errors",
+                "job-id-aqui"
+              ]
             },
             "description": "Obtener lista de registros que fallaron en un job específico"
           }
@@ -397,8 +498,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/sync/errors/job-id-aqui/retry",
-              "host": ["{{baseUrl}}"],
-              "path": ["sync", "errors", "job-id-aqui", "retry"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sync",
+                "errors",
+                "job-id-aqui",
+                "retry"
+              ]
             },
             "description": "Reintentar procesar los registros que fallaron en un job"
           }
@@ -424,8 +532,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/text",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "text"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "text"
+              ]
             },
             "description": "Búsqueda simple de 'lentes de seguridad' sin filtros. Encontrará productos como: LENTES DE SEGURIDAD MODELO GENESIS HONEYWELL"
           }
@@ -446,8 +559,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/text",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "text"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "text"
+              ]
             },
             "description": "Búsqueda filtrada por cliente HONEYWELL (000106) - solo productos vendidos a este cliente"
           }
@@ -468,8 +586,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/text",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "text"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "text"
+              ]
             },
             "description": "Búsqueda con filtro de cliente (004401) Y marca (PILOT). Encontrará: BOLIGRAFO BL-G2-5 CON GRIP RETRACTIL NEGRO PILOT, LAPICERO TINTA FINA BPS-FINE AZUL PILOT, etc"
           }
@@ -490,8 +613,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/text",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "text"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "text"
+              ]
             },
             "description": "Búsqueda de adhesivos LOCTITE para cliente 003592. Encontrará: ADHESIVO SUPER BONDER 495"
           }
@@ -512,8 +640,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/text",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "text"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "text"
+              ]
             },
             "description": "Búsqueda con LLM Filter ACTIVADO - el modelo de IA inteligente refina los resultados según relevancia semántica. Busca marcadores/plumones para cliente 004401"
           }
@@ -534,8 +667,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/text",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "text"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "text"
+              ]
             },
             "description": "Búsqueda completa: filtra por cliente + marca, activa búsqueda en internet, y aplica LLM filter para mejor relevancia. Combina resultados internos y externos"
           }
@@ -556,8 +694,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/text",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "text"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "text"
+              ]
             },
             "description": "Búsqueda simultánea en ambos datasources: catalogo_efc y catalogo_stock"
           }
@@ -578,8 +721,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/text",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "text"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "text"
+              ]
             },
             "description": "Búsqueda de papel fotocopia para cliente 004401. Encontrará: PAPEL FOTOCOPIA A4 75GRM PQT X 500HJS"
           }
@@ -606,8 +754,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/image?collection={{collection_efc}}&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "image"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "image"
+              ],
               "query": [
                 {
                   "key": "collection",
@@ -639,8 +792,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/image?collection={{collection_stock}}&limit=5",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "image"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "image"
+              ],
               "query": [
                 {
                   "key": "collection",
@@ -676,8 +834,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/recommend",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "recommend"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "recommend"
+              ]
             },
             "description": "Recomendaciones basadas en el producto LENTES DE SEGURIDAD HONEYWELL (ID: 41010584). Encontrará productos similares que este cliente también podría comprar"
           }
@@ -698,8 +861,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/recommend",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "recommend"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "recommend"
+              ]
             },
             "description": "Recomendaciones basadas en dos productos PILOT (bolígrafos). Sistema encuentra productos complementarios"
           }
@@ -720,8 +888,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/recommend",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "recommend"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "recommend"
+              ]
             },
             "description": "Recomendaciones avanzadas: positivos (productos a recomendar similar) + negativos (productos a EXCLUIR de resultados)"
           }
@@ -742,8 +915,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/search/recommend",
-              "host": ["{{baseUrl}}"],
-              "path": ["search", "recommend"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "recommend"
+              ]
             },
             "description": "Recomendaciones basadas en adhesivos LOCTITE. Útil para sugerir productos relacionados al cliente 003592"
           }
@@ -769,8 +947,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/duplicates/detect",
-              "host": ["{{baseUrl}}"],
-              "path": ["duplicates", "detect"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "duplicates",
+                "detect"
+              ]
             },
             "description": "Detectar productos duplicados en toda la colección catalogo_efc. Usa IA para clasificar duplicados verdaderos vs. similares"
           }
@@ -791,8 +974,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/duplicates/detect",
-              "host": ["{{baseUrl}}"],
-              "path": ["duplicates", "detect"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "duplicates",
+                "detect"
+              ]
             },
             "description": "Detectar duplicados solo en productos vendidos al cliente HONEYWELL (000106)"
           }
@@ -813,8 +1001,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/duplicates/detect",
-              "host": ["{{baseUrl}}"],
-              "path": ["duplicates", "detect"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "duplicates",
+                "detect"
+              ]
             },
             "description": "Detectar duplicados en bolígrafos PILOT vendidos a cliente 004401"
           }
@@ -835,8 +1028,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/duplicates/detect",
-              "host": ["{{baseUrl}}"],
-              "path": ["duplicates", "detect"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "duplicates",
+                "detect"
+              ]
             },
             "description": "Detectar duplicados en todos los productos FABER CASTELL"
           }
@@ -848,8 +1046,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/duplicates/report?collection={{collection_efc}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["duplicates", "report"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "duplicates",
+                "report"
+              ],
               "query": [
                 {
                   "key": "collection",
@@ -867,8 +1070,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/duplicates/filter-values?collection={{collection_efc}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["duplicates", "filter-values"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "duplicates",
+                "filter-values"
+              ],
               "query": [
                 {
                   "key": "collection",
@@ -895,8 +1103,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/duplicates/analyze-product",
-              "host": ["{{baseUrl}}"],
-              "path": ["duplicates", "analyze-product"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "duplicates",
+                "analyze-product"
+              ]
             },
             "description": "Análisis detallado de duplicados del producto LENTES DE SEGURIDAD HONEYWELL GENESIS"
           }
@@ -917,8 +1130,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/duplicates/analyze-product",
-              "host": ["{{baseUrl}}"],
-              "path": ["duplicates", "analyze-product"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "duplicates",
+                "analyze-product"
+              ]
             },
             "description": "Análisis de duplicados del bolígrafo PILOT BL-G2-5"
           }
@@ -935,10 +1153,243 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
             },
             "description": "**Clientes principales en catalogo_efc:**\n\n- **000106** (HONEYWELL): Compra artículos de seguridad\n  - Productos: Lentes de seguridad HONEYWELL GENESIS, barras retráctiles\n  - Marcas: HONEYWELL, UVEX\n\n- **000633** (Agua/Bebidas): Distribuidor de agua\n  - Productos: Agua mineral S/GAS\n  - Marcas: SAN LUIS\n\n- **003592** (Industrial): Compra adhesivos y herramientas\n  - Productos: Adhesivos LOCTITE 495, brochas TUMI\n  - Marcas: LOCTITE, TUMI\n\n- **004401** (Papelería/Oficina): Proveedor de artículos de oficina\n  - Productos: Papel fotocopia A4, plumones FABER CASTELL, bolígrafos PILOT\n  - Marcas: REPORT, FABER CASTELL, PILOT, OVE\n\n**Parámetros clave para búsquedas:**\n- useLLMFilter: true = IA refina resultados | false = búsqueda vectorial pura\n- includeInternetSearch: true = busca también en internet\n- similarityThreshold: 0.80-0.90 = qué tan similares deben ser los duplicados\n- filters: filtrar por cliente y/o marca"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Advanced Search with Payload Filters",
+      "item": [
+        {
+          "name": "1. Products with sales in last 3 years (>= 1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"desarmador\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 1 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/text",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. In-stock products only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"llave inglesa\",\n  \"collections\": [\"catalogo_efc_200k\", \"catalogo_stock\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"en_stock\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/text",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Very popular products (50+ sales)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"tornillo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 15,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 50 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/text",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Moderately popular in-stock (5-50 sales)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"martillo\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 5, \"lte\": 50 },\n    \"en_stock\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/text",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. HONEYWELL brand with payload filters",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"lentes de seguridad\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"marca\": \"HONEYWELL\",\n  \"payloadFilters\": {\n    \"ventas_3_anios\": { \"gte\": 1 },\n    \"precio_lista\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/text",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Client filter with payload filters",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"pistola de aire\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"cliente\": \"000106\",\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gt\": 0 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/text",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. With LLM semantic filter + payload filters",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"taladro\",\n  \"collections\": [\"catalogo_efc_200k\"],\n  \"limit\": 10,\n  \"useLLMFilter\": true,\n  \"payloadFilters\": {\n    \"en_stock\": true,\n    \"ventas_3_anios\": { \"gte\": 5 }\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/text",
+              "protocol": "http",
+              "host": [
+                "192",
+                "168",
+                "40",
+                "197"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "search",
+                "text"
+              ]
+            }
           }
         }
       ]
