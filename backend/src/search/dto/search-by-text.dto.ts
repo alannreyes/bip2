@@ -34,4 +34,13 @@ export class SearchByTextDto {
   @Type(() => Boolean)
   @IsBoolean()
   useLLMFilter?: boolean = false; // Default: false - trust embeddings
+
+  @IsOptional()
+  payloadFilters?: {
+    // Examples:
+    // { "ventas_3_anios": { "gte": 1 } } - Products with 1+ sales in last 3 years
+    // { "en_stock": true } - Only in-stock products
+    // { "ventas_3_anios": { "range": { "gte": 50 } } } - Very popular products (50+ sales)
+    [key: string]: any;
+  };
 }

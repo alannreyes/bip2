@@ -21,9 +21,10 @@ export class SearchService {
     marca?: string,
     cliente?: string,
     useLLMFilter: boolean = false,
+    payloadFilters?: { [key: string]: any },
   ): Promise<any> {
     this.logger.log(`Searching by text in collection: ${collectionName}`);
-    this.logger.debug(`Query: ${query}${marca ? `, Marca: ${marca}` : ''}${cliente ? `, Cliente: ${cliente}` : ''} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'}`);
+    this.logger.debug(`Query: ${query}${marca ? `, Marca: ${marca}` : ''}${cliente ? `, Cliente: ${cliente}` : ''}${payloadFilters ? `, Payload Filters: ${JSON.stringify(payloadFilters)}` : ''} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'}`);
 
     const startTime = Date.now();
 
@@ -53,8 +54,8 @@ export class SearchService {
       // Step 2: Build attention-based query structure using enhanced query
       const attentionQuery = this.buildAttentionQuery(enhancedQuery, keywords);
 
-      // Step 3: Build Qdrant filter for hybrid search
-      const qdrantFilter = this.buildQdrantFilter(keywords);
+      // Step 3: Build Qdrant filter for hybrid search (includes payload filters)
+      const qdrantFilter = this.buildQdrantFilter(keywords, payloadFilters);
 
       // Step 4: Generate embedding from attention-structured query
       this.logger.debug('Generating embedding from attention query...');
@@ -231,21 +232,87 @@ export class SearchService {
   }
 
   /**
-   * Build Qdrant filter from extracted keywords for hybrid search
-   * IMPORTANT: NO hardcoded filters - trust vector search completely
-   * Let Gemini embeddings capture semantic similarity (desarmador ≈ destornillador, etc.)
-   * Use re-ranking to boost/penalize based on keywords
+   * Build Qdrant filter from extracted keywords and optional payload filters
+   * Strategy:
+   * - No hardcoded filters (trust vector search for semantic similarity)
+   * - Optional custom payload filters (for explicit field constraints)
+   * - Examples:
+   *   { "ventas_3_anios": { "gte": 1 } } → Products with 1+ sales
+   *   { "en_stock": true } → Only in-stock products
+   *   { "ventas_3_anios": { "gte": 50 } } → Very popular items (50+ sales)
    */
-  private buildQdrantFilter(keywords: { brands: string[], dimensions: string[], colors: string[], presentations: string[], models: string[], materials: string[], productCore: string[], regular: string[] }): any {
-    // NO FILTERS - trust vector search 100%
-    // Gemini embeddings are powerful enough to understand:
-    // - Synonyms: desarmador ≈ destornillador
-    // - Variations: 6" ≈ 6 pulgadas ≈ 15cm
-    // - Brands: stanley ≈ STANLEY
-    //
-    // Re-ranking will boost exact matches later
-    this.logger.debug('NO filters applied - trusting vector search + re-ranking completely');
-    return null;
+  private buildQdrantFilter(
+    keywords: { brands: string[], dimensions: string[], colors: string[], presentations: string[], models: string[], materials: string[], productCore: string[], regular: string[] },
+    payloadFilters?: { [key: string]: any }
+  ): any {
+    // If no custom payload filters provided, trust vector search 100%
+    if (!payloadFilters || Object.keys(payloadFilters).length === 0) {
+      this.logger.debug('NO custom filters applied - trusting vector search + re-ranking completely');
+      return null;
+    }
+
+    // Build Qdrant filter from payload constraints
+    // Convert common field names to actual payload field names
+    const fieldMapping: { [key: string]: string } = {
+      'ventas_3_anios': 'ventas_3_anios',
+      'Cantidad_Ventas_Ultimos_3_Anios': 'ventas_3_anios',
+      'en_stock': 'en_stock',
+      'stock': 'en_stock',
+      'precio_lista': 'precio_lista',
+      'fecha_ultima_venta': 'fecha_ultima_venta',
+      'ultima_venta': 'fecha_ultima_venta',
+    };
+
+    const qdrantFilter: any = {
+      must: []
+    };
+
+    // Process each payload filter
+    for (const [field, condition] of Object.entries(payloadFilters)) {
+      const actualField = fieldMapping[field] || field;
+
+      if (typeof condition === 'object' && condition !== null) {
+        // Handle range filters: { "gte": 1 }, { "gt": 0, "lte": 100 }, etc.
+        if ('gte' in condition || 'gt' in condition || 'lte' in condition || 'lt' in condition) {
+          const rangeFilter: any = {};
+          if ('gte' in condition) rangeFilter.gte = condition.gte;
+          if ('gt' in condition) rangeFilter.gt = condition.gt;
+          if ('lte' in condition) rangeFilter.lte = condition.lte;
+          if ('lt' in condition) rangeFilter.lt = condition.lt;
+
+          qdrantFilter.must.push({
+            range: {
+              [actualField]: rangeFilter
+            }
+          });
+
+          this.logger.debug(`Applied range filter on ${actualField}: ${JSON.stringify(rangeFilter)}`);
+        } else {
+          // Handle nested object filters
+          qdrantFilter.must.push({
+            [actualField]: condition
+          });
+
+          this.logger.debug(`Applied filter on ${actualField}: ${JSON.stringify(condition)}`);
+        }
+      } else {
+        // Handle simple equality filters: true, false, string value
+        qdrantFilter.must.push({
+          [actualField]: condition
+        });
+
+        this.logger.debug(`Applied equality filter: ${actualField} = ${condition}`);
+      }
+    }
+
+    // Return null if no filters were built
+    if (qdrantFilter.must.length === 0) {
+      this.logger.debug('No valid payload filters built');
+      return null;
+    }
+
+    this.logger.log(`Applied custom Qdrant filters: ${JSON.stringify(qdrantFilter)}`);
+    return qdrantFilter;
   }
 
   /**
@@ -873,6 +940,7 @@ export class SearchService {
     cliente?: string,
     includeInternetSearch: boolean = false,
     useLLMFilter: boolean = false,
+    payloadFilters?: { [key: string]: any },
   ): Promise<any> {
     this.logger.log(`Searching by text in ${collectionNames.length} collections: ${collectionNames.join(', ')} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'}`);
 
@@ -885,7 +953,7 @@ export class SearchService {
       const searchPromises = collectionNames.map(async (collectionName) => {
         try {
           this.logger.debug(`Searching in collection: ${collectionName}`);
-          const result = await this.searchByText(query, collectionName, limit, marca, cliente, useLLMFilter);
+          const result = await this.searchByText(query, collectionName, limit, marca, cliente, useLLMFilter, payloadFilters);
 
           // Add collection name to each result
           const resultsWithCollection = result.results.map((r: any) => ({

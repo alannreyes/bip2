@@ -36,6 +36,7 @@ export class SearchController {
       dto.cliente,
       false, // Never include internet search in this endpoint
       dto.useLLMFilter || false, // Optional LLM filter (default: OFF - trust embeddings)
+      dto.payloadFilters, // Optional payload filters for explicit field constraints
     );
   }
 
