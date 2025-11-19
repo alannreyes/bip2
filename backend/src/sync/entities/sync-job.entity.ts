@@ -50,6 +50,9 @@ export class SyncJob {
   @Column({ type: 'timestamp', nullable: true })
   completedAt: Date | null;
 
+  @Column({ type: 'timestamp', nullable: true })
+  lastProgressAt: Date | null;
+
   @Column({ type: 'text', nullable: true })
   errorMessage: string | null;
 

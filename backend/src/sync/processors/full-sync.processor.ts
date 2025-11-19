@@ -118,9 +118,19 @@ export class FullSyncProcessor {
         }
       }
 
-      // Mark job as completed
-      await this.syncService.updateJobStatus(jobId, 'completed');
-      this.logger.log(`Full sync job completed: ${jobId}`);
+      // Verify that all records were processed before marking as completed
+      const finalJob = await this.syncService.getJob(jobId);
+      if (finalJob.processedRecords >= totalCount) {
+        await this.syncService.updateJobStatus(jobId, 'completed');
+        this.logger.log(`✅ Full sync job completed successfully: ${jobId} (${finalJob.processedRecords}/${totalCount} records)`);
+      } else {
+        // Job finished the loop but didn't process all records (likely due to database errors)
+        const errorMsg = `Sync incomplete: processed ${finalJob.processedRecords}/${totalCount} records (${Math.round((finalJob.processedRecords / totalCount) * 100)}%)`;
+        await this.syncService.updateJobStatus(jobId, 'failed', {
+          errorMessage: errorMsg,
+        });
+        this.logger.warn(`⚠️ ${errorMsg} - Job marked as failed to enable resume on next run`);
+      }
 
     } catch (error) {
       this.logger.error(`Full sync job failed: ${error.message}`, error.stack);

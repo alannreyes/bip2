@@ -240,6 +240,9 @@ export class SyncService {
     await this.syncJobRepository.increment({ id: jobId }, 'processedRecords', processed);
     await this.syncJobRepository.increment({ id: jobId }, 'successfulRecords', successful);
     await this.syncJobRepository.increment({ id: jobId }, 'failedRecords', failed);
+
+    // Update lastProgressAt to track that the job is actively making progress
+    await this.syncJobRepository.update({ id: jobId }, { lastProgressAt: new Date() });
   }
 
   async logError(
@@ -268,13 +271,17 @@ export class SyncService {
   }
 
   async findStaleJobs(): Promise<SyncJob[]> {
-    // Find jobs that are running but haven't been started or updated in 30 minutes
+    // Find jobs that are running but haven't made progress in 30 minutes
+    // Uses lastProgressAt instead of startedAt to avoid marking slow but active jobs as stale
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
     return await this.syncJobRepository
       .createQueryBuilder('job')
       .where('job.status = :status', { status: 'running' })
-      .andWhere('job.startedAt < :thirtyMinutesAgo', { thirtyMinutesAgo })
+      .andWhere(
+        '(job.lastProgressAt IS NULL AND job.startedAt < :thirtyMinutesAgo) OR (job.lastProgressAt < :thirtyMinutesAgo)',
+        { thirtyMinutesAgo }
+      )
       .getMany();
   }
 
@@ -311,10 +318,10 @@ export class SyncService {
     let resumeSource = job;
 
     // Si el job actual tiene registros procesados, usarlos
-    if (job.processedRecords > 0 && job.status !== 'completed') {
-      this.logger.log(`🔄 RESTART DETECTED: Current job ${jobId} has ${job.processedRecords} processed records but status is '${job.status}'`);
+    if (job.processedRecords > 0 && job.totalRecords && job.processedRecords < job.totalRecords) {
+      this.logger.log(`🔄 RESTART DETECTED: Current job ${jobId} has ${job.processedRecords}/${job.totalRecords} processed records (${Math.round((job.processedRecords / job.totalRecords) * 100)}%)`);
     }
-    // Si no, buscar un job anterior del mismo datasource con registros procesados
+    // Si no, buscar un job anterior del mismo datasource con registros procesados pero incompletos
     else if (job.processedRecords === 0 || job.status === 'pending') {
       const previousJob = await this.syncJobRepository.findOne({
         where: {
@@ -324,8 +331,16 @@ export class SyncService {
         order: { createdAt: 'DESC' },
       });
 
-      if (previousJob && previousJob.processedRecords > 0 && previousJob.status !== 'completed') {
-        this.logger.log(`🔍 INHERITED RESUME: Found previous job ${previousJob.id} (status: ${previousJob.status}) with ${previousJob.processedRecords} processed records`);
+      // Buscar jobs incompletos (sin importar el status, solo que tenga progreso y no esté al 100%)
+      const isIncomplete = previousJob &&
+                          previousJob.processedRecords > 0 &&
+                          previousJob.totalRecords &&
+                          previousJob.processedRecords < previousJob.totalRecords;
+
+      if (isIncomplete) {
+        const progressPercent = Math.round((previousJob.processedRecords / previousJob.totalRecords) * 100);
+        this.logger.log(`🔍 INHERITED RESUME: Found incomplete job ${previousJob.id} (status: ${previousJob.status}, progress: ${progressPercent}%)`);
+        this.logger.log(`📊 Previous job stats: ${previousJob.processedRecords}/${previousJob.totalRecords} records processed`);
         this.logger.log(`🔄 INHERITING: Current job ${jobId} will resume from previous job's progress`);
 
         // Copiar valores del job anterior al actual
