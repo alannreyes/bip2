@@ -1,0 +1,100 @@
+{
+	"info": {
+		"_postman_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+		"name": "BIP2 - Validar Duplicados (Producción)",
+		"description": "Validar si un producto ya existe antes de registrarlo.\n\n## Respuestas\n- reject - Duplicado, no registrar\n- accept - Producto nuevo\n- review - Requiere revisión",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Duplicado (typo en marca)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE MIXTA 18MM STANELY 86-863\",\n  \"similarityThreshold\": 0.85\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+					"protocol": "http",
+					"host": ["192", "168", "40", "197"],
+					"port": "3001",
+					"path": ["api", "duplicates", "validate-exists"]
+				},
+				"description": "Typo: STANELY en lugar de STANLEY"
+			},
+			"response": []
+		},
+		{
+			"name": "2. Duplicado (PULGADAS = comillas)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE STILLSON 18 PULGADAS STANLEY\",\n  \"similarityThreshold\": 0.85\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+					"protocol": "http",
+					"host": ["192", "168", "40", "197"],
+					"port": "3001",
+					"path": ["api", "duplicates", "validate-exists"]
+				},
+				"description": "18 PULGADAS equivale a 18 pulgadas"
+			},
+			"response": []
+		},
+		{
+			"name": "3. Producto Nuevo",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"TALADRO PERCUTOR INALAMBRICO 20V DEWALT DCD996\",\n  \"marca\": \"DEWALT\",\n  \"similarityThreshold\": 0.85\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+					"protocol": "http",
+					"host": ["192", "168", "40", "197"],
+					"port": "3001",
+					"path": ["api", "duplicates", "validate-exists"]
+				},
+				"description": "Producto que no existe en el catalogo"
+			},
+			"response": []
+		}
+	]
+}

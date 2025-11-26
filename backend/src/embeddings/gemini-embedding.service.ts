@@ -98,123 +98,126 @@ export class GeminiEmbeddingService {
         return [];
       }
 
-      // Filter out empty texts
-      const validTexts = texts.filter((t) => t && t.trim().length > 0);
+      // Filter out empty texts and track original indices
+      const validTextsWithIndices: { text: string; originalIndex: number }[] = [];
+      texts.forEach((t, idx) => {
+        if (t && t.trim().length > 0) {
+          validTextsWithIndices.push({ text: t.trim(), originalIndex: idx });
+        }
+      });
 
-      if (validTexts.length === 0) {
+      if (validTextsWithIndices.length === 0) {
         return [];
       }
 
-      // Use direct fetch API instead of library for more reliable batch processing
-      const embeddings: number[][] = [];
-      const chunkSize = 5; // Very small batches to avoid overwhelming the API
+      const embeddings: number[][] = new Array(texts.length).fill(null);
 
-      for (let i = 0; i < validTexts.length; i += chunkSize) {
-        const chunk = validTexts.slice(i, i + chunkSize);
+      // Use TRUE batch API - process 20 texts per request (conservative but fast)
+      // Gemini supports up to 100, but 20 is safer for rate limits
+      const batchSize = parseInt(process.env.GEMINI_BATCH_SIZE || '20', 10);
+      const maxRetries = 3;
 
-        // Process each text with retry logic
-        for (const text of chunk) {
-          let embedding: number[] | null = null;
-          const maxRetries = 5; // More retries for connection issues
-          let lastError: Error | null = null;
+      for (let i = 0; i < validTextsWithIndices.length; i += batchSize) {
+        const batch = validTextsWithIndices.slice(i, i + batchSize);
+        const batchNum = Math.floor(i / batchSize) + 1;
+        const totalBatches = Math.ceil(validTextsWithIndices.length / batchSize);
 
-          for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-              // Sanitize and validate text
-              const cleanText = text.trim();
-              if (!cleanText) {
-                this.logger.warn(`Empty text after trim, skipping`);
-                break;
-              }
+        this.logger.debug(`Processing TRUE batch ${batchNum}/${totalBatches} (${batch.length} texts)`);
 
-              const debugAttempt = attempt > 0 ? ` (attempt ${attempt + 1}/${maxRetries})` : '';
-              this.logger.debug(`Embedding text (${cleanText.length} chars)${debugAttempt}: ${cleanText.substring(0, 50)}...`);
+        let lastError: Error | null = null;
+        let success = false;
 
-              const payload = {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            // Build batch request payload for batchEmbedContents API
+            const payload = {
+              requests: batch.map(item => ({
                 model: 'models/gemini-embedding-001',
                 content: {
-                  parts: [{ text: cleanText }],
+                  parts: [{ text: item.text }],
                 },
-              };
+              })),
+            };
 
-              const bodyStr = JSON.stringify(payload);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for batch
 
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-              const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${this.apiKey}`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json; charset=utf-8',
-                    'Accept': 'application/json',
-                    'User-Agent': 'BIP2-Backend/1.0',
-                  },
-                  body: bodyStr,
-                  signal: controller.signal,
-                }
-              );
-
-              clearTimeout(timeoutId);
-
-              this.logger.debug(`Response status: ${response.status}${debugAttempt ? ` ${debugAttempt}` : ''}`);
-
-              if (!response.ok) {
-                const errorData = await response.text();
-                lastError = new Error(`API returned ${response.status}: ${errorData.substring(0, 200)}`);
-
-                // Retry on 400/429/503/504 errors (rate limit, temporary server issues, etc)
-                if ((response.status === 400 || response.status === 429 || response.status === 503 || response.status === 504) && attempt < maxRetries - 1) {
-                  const backoffDelay = Math.pow(2, attempt + 2) * 1000; // 4s, 8s, 16s, 32s exponential backoff
-                  this.logger.warn(`Rate limit or server error (${response.status}), retrying in ${backoffDelay}ms (attempt ${attempt + 1}/${maxRetries})...`);
-                  await new Promise(resolve => setTimeout(resolve, backoffDelay));
-                  continue;
-                }
-
-                throw lastError;
+            const response = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key=${this.apiKey}`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json; charset=utf-8',
+                  'Accept': 'application/json',
+                  'User-Agent': 'BIP2-Backend/1.0',
+                },
+                body: JSON.stringify(payload),
+                signal: controller.signal,
               }
+            );
 
-              const data = await response.json();
+            clearTimeout(timeoutId);
 
-              if (data.embedding && data.embedding.values) {
-                embedding = data.embedding.values;
-                embeddings.push(embedding);
-                break; // Success, exit retry loop
-              } else {
-                this.logger.warn(`No embedding returned for text: ${cleanText.substring(0, 50)}...`);
-                break;
-              }
-            } catch (textError) {
-              lastError = textError as Error;
-              if (attempt < maxRetries - 1) {
-                // Longer exponential backoff for connection errors
-                const backoffDelay = Math.pow(2, attempt + 2) * 1000; // 4s, 8s, 16s, 32s, 64s
-                this.logger.warn(`Connection/parse error on attempt ${attempt + 1}/${maxRetries}, retrying in ${backoffDelay}ms: ${lastError.message}`);
+            if (!response.ok) {
+              const errorData = await response.text();
+              lastError = new Error(`Batch API returned ${response.status}: ${errorData.substring(0, 300)}`);
+
+              // Retry on rate limit or server errors
+              if ((response.status === 429 || response.status === 503 || response.status === 504) && attempt < maxRetries - 1) {
+                const backoffDelay = Math.pow(2, attempt + 1) * 2000; // 4s, 8s, 16s
+                this.logger.warn(`Batch rate limit/error (${response.status}), retrying in ${backoffDelay}ms (attempt ${attempt + 1}/${maxRetries})...`);
                 await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                continue;
               }
+
+              throw lastError;
+            }
+
+            const data = await response.json();
+
+            // Process batch response - embeddings array matches request order
+            if (data.embeddings && Array.isArray(data.embeddings)) {
+              data.embeddings.forEach((emb: any, idx: number) => {
+                if (emb.values && batch[idx]) {
+                  embeddings[batch[idx].originalIndex] = emb.values;
+                }
+              });
+              success = true;
+              this.logger.debug(`Batch ${batchNum}/${totalBatches} completed: ${data.embeddings.length} embeddings`);
+              break; // Success, exit retry loop
+            } else {
+              throw new Error('Invalid batch response structure');
+            }
+          } catch (batchError) {
+            lastError = batchError as Error;
+            if (attempt < maxRetries - 1) {
+              const backoffDelay = Math.pow(2, attempt + 1) * 2000;
+              this.logger.warn(`Batch ${batchNum} attempt ${attempt + 1} failed, retrying in ${backoffDelay}ms: ${lastError.message}`);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
             }
           }
-
-          if (!embedding && lastError) {
-            this.logger.error(`Failed to embed text after ${maxRetries} attempts: ${lastError.message}`);
-            throw lastError;
-          }
-
-          // Delay between requests (configurable via environment variable)
-          // Default: 600ms = ~100 reqs/minute max (safe for free tier)
-          // Can be adjusted based on API quotas and rate limits
-          const delayBetweenRequests = parseInt(
-            process.env.GEMINI_EMBEDDING_DELAY_MS || '600',
-            10,
-          );
-          await new Promise(resolve => setTimeout(resolve, delayBetweenRequests));
         }
 
-        this.logger.debug(`Processed batch ${Math.floor(i / chunkSize) + 1} (${i + chunk.length}/${validTexts.length})`);
+        if (!success && lastError) {
+          this.logger.error(`Batch ${batchNum} failed after ${maxRetries} attempts: ${lastError.message}`);
+          throw lastError;
+        }
+
+        // Small delay between batches to avoid rate limits (configurable)
+        const delayBetweenBatches = parseInt(process.env.GEMINI_BATCH_DELAY_MS || '500', 10);
+        if (i + batchSize < validTextsWithIndices.length) {
+          await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+        }
       }
 
-      return embeddings;
+      // Filter out any null entries (shouldn't happen, but safety check)
+      const finalEmbeddings = embeddings.filter(e => e !== null);
+
+      if (finalEmbeddings.length !== validTextsWithIndices.length) {
+        this.logger.warn(`Expected ${validTextsWithIndices.length} embeddings, got ${finalEmbeddings.length}`);
+      }
+
+      return finalEmbeddings;
     } catch (error) {
       this.logger.error(`Failed to generate batch embeddings: ${error.message}`);
       throw new Error(`Gemini batch embedding failed: ${error.message}`);
