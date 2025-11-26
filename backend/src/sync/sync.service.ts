@@ -307,85 +307,83 @@ export class SyncService {
    * 1. Verifica si el job actual tiene processedRecords > 0
    * 2. Si no, busca un job anterior del mismo datasource con processedRecords > 0
    * 3. Si encuentra uno, hereda sus valores para continuar desde ese punto
+   * 4. NUEVO: También considera qdrantPointsCount como fuente de verdad
    */
-  async checkIfJobShouldResume(jobId: string): Promise<{ shouldResume: boolean, lastOffset: number, stats: any }> {
+  async checkIfJobShouldResume(jobId: string, qdrantPointsCount?: number): Promise<{ shouldResume: boolean, lastOffset: number, stats: any }> {
     const job = await this.syncJobRepository.findOne({ where: { id: jobId } });
 
     if (!job) {
       return { shouldResume: false, lastOffset: 0, stats: { error: 'Job not found' } };
     }
 
-    let resumeSource = job;
+    let resumeOffset = 0;
+    let resumeSource = 'none';
 
-    // Si el job actual tiene registros procesados, usarlos
+    // PRIORIDAD 1: Si el job actual tiene registros procesados, usarlos
     if (job.processedRecords > 0 && job.totalRecords && job.processedRecords < job.totalRecords) {
+      resumeOffset = job.processedRecords;
+      resumeSource = 'current_job';
       this.logger.log(`🔄 RESTART DETECTED: Current job ${jobId} has ${job.processedRecords}/${job.totalRecords} processed records (${Math.round((job.processedRecords / job.totalRecords) * 100)}%)`);
     }
-    // Si no, buscar un job anterior del mismo datasource con registros procesados pero incompletos
+    // PRIORIDAD 2: Si Qdrant tiene puntos, usar eso como offset (fuente de verdad)
+    else if (qdrantPointsCount && qdrantPointsCount > 0) {
+      resumeOffset = qdrantPointsCount;
+      resumeSource = 'qdrant_points';
+      this.logger.log(`🎯 QDRANT RESUME: Found ${qdrantPointsCount} existing points in Qdrant - using as resume offset`);
+    }
+    // PRIORIDAD 3: Buscar job anterior con progreso
     else if (job.processedRecords === 0 || job.status === 'pending') {
-      const previousJob = await this.syncJobRepository.findOne({
-        where: {
-          datasourceId: job.datasourceId,
-          type: job.type,
-        },
-        order: { createdAt: 'DESC' },
-      });
+      // IMPORTANT: Exclude current job and find the most recent one with progress
+      const previousJob = await this.syncJobRepository
+        .createQueryBuilder('job')
+        .where('job.datasourceId = :datasourceId', { datasourceId: job.datasourceId })
+        .andWhere('job.type = :type', { type: job.type })
+        .andWhere('job.id != :currentJobId', { currentJobId: jobId })
+        .andWhere('job.processedRecords > 0')
+        .orderBy('job.createdAt', 'DESC')
+        .getOne();
 
-      // Buscar jobs incompletos (sin importar el status, solo que tenga progreso y no esté al 100%)
-      const isIncomplete = previousJob &&
-                          previousJob.processedRecords > 0 &&
-                          previousJob.totalRecords &&
-                          previousJob.processedRecords < previousJob.totalRecords;
-
-      if (isIncomplete) {
-        const progressPercent = Math.round((previousJob.processedRecords / previousJob.totalRecords) * 100);
-        this.logger.log(`🔍 INHERITED RESUME: Found incomplete job ${previousJob.id} (status: ${previousJob.status}, progress: ${progressPercent}%)`);
-        this.logger.log(`📊 Previous job stats: ${previousJob.processedRecords}/${previousJob.totalRecords} records processed`);
-        this.logger.log(`🔄 INHERITING: Current job ${jobId} will resume from previous job's progress`);
-
-        // Copiar valores del job anterior al actual
-        job.processedRecords = previousJob.processedRecords;
-        job.successfulRecords = previousJob.successfulRecords;
-        job.failedRecords = previousJob.failedRecords;
-
-        // Guardar los valores heredados
-        await this.syncJobRepository.save(job);
-
-        resumeSource = job; // Usar los valores heredados
+      if (previousJob && previousJob.processedRecords > 0) {
+        resumeOffset = previousJob.processedRecords;
+        resumeSource = 'previous_job';
+        const progressPercent = previousJob.totalRecords
+          ? Math.round((previousJob.processedRecords / previousJob.totalRecords) * 100)
+          : 0;
+        this.logger.log(`🔍 INHERITED RESUME: Found previous job ${previousJob.id} with ${previousJob.processedRecords} records (${progressPercent}%)`);
       }
     }
 
     // Verificar si tenemos que resumir
-    if (resumeSource.processedRecords > 0 && resumeSource.status !== 'completed') {
+    if (resumeOffset > 0) {
       // Calcular último offset basado en registros procesados
       // Usamos batch size de 100 (mismo que full-sync.processor.ts)
       const batchSize = 100;
-      const lastCompleteBatch = Math.floor(resumeSource.processedRecords / batchSize);
+      const lastCompleteBatch = Math.floor(resumeOffset / batchSize);
       const lastOffset = lastCompleteBatch * batchSize;
 
       const stats = {
-        processedRecords: resumeSource.processedRecords,
-        successfulRecords: resumeSource.successfulRecords,
-        failedRecords: resumeSource.failedRecords,
-        totalRecords: resumeSource.totalRecords,
-        progressPercent: resumeSource.totalRecords ? Math.round((resumeSource.processedRecords / resumeSource.totalRecords) * 100) : 0,
-        estimatedRecordsSaved: resumeSource.processedRecords,
-        lastCompleteBatch: lastCompleteBatch + 1, // +1 porque es 0-indexed
+        resumeSource,
+        processedRecords: resumeOffset,
+        qdrantPoints: qdrantPointsCount || 0,
+        progressPercent: job.totalRecords ? Math.round((resumeOffset / job.totalRecords) * 100) : 0,
+        estimatedRecordsSaved: resumeOffset,
+        lastCompleteBatch: lastCompleteBatch + 1,
       };
 
-      this.logger.log(`📊 RESUME STATS: Will resume from batch ${lastCompleteBatch + 1}, offset ${lastOffset}. Saved processing ${resumeSource.processedRecords} records!`);
+      this.logger.log(`📊 RESUME STATS: Will resume from batch ${lastCompleteBatch + 1}, offset ${lastOffset}. Source: ${resumeSource}. Saved processing ${resumeOffset} records!`);
 
       return { shouldResume: true, lastOffset, stats };
     }
 
-    this.logger.log(`🆕 NEW SYNC: Job ${jobId} starting fresh (processedRecords: ${resumeSource.processedRecords}, status: ${resumeSource.status})`);
+    this.logger.log(`🆕 NEW SYNC: Job ${jobId} starting fresh (no previous progress found)`);
     return {
       shouldResume: false,
       lastOffset: 0,
       stats: {
-        processedRecords: resumeSource.processedRecords,
-        status: resumeSource.status,
-        reason: 'No records to resume or job already completed'
+        resumeSource: 'none',
+        processedRecords: 0,
+        qdrantPoints: qdrantPointsCount || 0,
+        reason: 'No records to resume'
       }
     };
   }

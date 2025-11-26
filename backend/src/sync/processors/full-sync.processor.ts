@@ -33,13 +33,26 @@ export class FullSyncProcessor {
     this.logger.log(`Starting full sync job: ${jobId}`);
 
     try {
-      // 🧠 SMART RESUME: Detectar si debemos reanudar desde un punto anterior
-      const resumeInfo = await this.syncService.checkIfJobShouldResume(jobId);
-      
+      // Get datasource configuration first (needed for Qdrant collection name)
+      const datasource = await this.datasourcesService.findOne(datasourceId);
+
+      // 🎯 Get current Qdrant points count as SOURCE OF TRUTH for resume
+      let qdrantPointsCount = 0;
+      try {
+        const collectionInfo = await this.qdrantService.getCollectionInfo(datasource.qdrantCollection);
+        qdrantPointsCount = collectionInfo?.points_count || 0;
+        this.logger.log(`📊 QDRANT STATE: Collection "${datasource.qdrantCollection}" has ${qdrantPointsCount} existing points`);
+      } catch (error) {
+        this.logger.warn(`Could not get Qdrant collection info: ${error.message}`);
+      }
+
+      // 🧠 SMART RESUME: Use Qdrant points as the primary source of truth
+      const resumeInfo = await this.syncService.checkIfJobShouldResume(jobId, qdrantPointsCount);
+
       if (resumeInfo.shouldResume) {
         this.logger.log(`🎯 SMART RESUME ACTIVATED: Resuming from record ${resumeInfo.lastOffset}`);
         this.logger.log(`💰 COST SAVINGS: Avoiding reprocessing of ${resumeInfo.stats.estimatedRecordsSaved} records`);
-        this.logger.log(`📊 PROGRESS: ${resumeInfo.stats.progressPercent}% already completed`);
+        this.logger.log(`📊 RESUME SOURCE: ${resumeInfo.stats.resumeSource}`);
       } else {
         this.logger.log(`🆕 NEW SYNC: Starting from beginning - ${resumeInfo.stats.reason}`);
       }
@@ -47,8 +60,6 @@ export class FullSyncProcessor {
       // Update job status to running (but preserve existing progress if resuming)
       await this.syncService.updateJobStatus(jobId, 'running');
 
-      // Get datasource configuration
-      const datasource = await this.datasourcesService.findOne(datasourceId);
       const connector = this.getConnector(datasource.type);
 
       // Get total count
