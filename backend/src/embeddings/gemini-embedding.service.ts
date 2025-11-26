@@ -643,6 +643,155 @@ Responde SOLO con un objeto JSON válido (sin markdown):
   }
 
   /**
+   * Validate if a product exists with LLM filtering to remove false positives
+   * This method analyzes each candidate and confirms only true duplicates
+   */
+  async validateProductExistsWithFilter(
+    newProduct: { descripcion: string; marca?: string; modelo?: string },
+    existingProducts: Array<{
+      id: string;
+      codigoEFC: string;
+      descripcion: string;
+      marca?: string;
+      similarity: number;
+      enStock: boolean;
+      fechaUltimaVenta: string | null;
+    }>,
+  ): Promise<{
+    exists: boolean;
+    isExactMatch: boolean;
+    isVariant: boolean;
+    reason: string;
+    confidence: number;
+    recommendation: 'reject' | 'accept' | 'review';
+    confirmedDuplicates: Array<{
+      codigoEFC: string;
+      descripcion: string;
+      marca?: string;
+      similarity: number;
+      enStock: boolean;
+      fechaUltimaVenta: string | null;
+      duplicateType: 'exact' | 'variant' | 'similar';
+    }>;
+  }> {
+    try {
+      if (existingProducts.length === 0) {
+        return {
+          exists: false,
+          isExactMatch: false,
+          isVariant: false,
+          reason: 'No se encontraron productos similares',
+          confidence: 1.0,
+          recommendation: 'accept',
+          confirmedDuplicates: [],
+        };
+      }
+
+      const model = this.genAI.getGenerativeModel({ model: this.visionModel });
+
+      // Build product comparison with EFC codes
+      const existingProductsText = existingProducts.slice(0, 10).map((p, idx) =>
+        `PRODUCTO ${idx + 1}:
+- Código EFC: ${p.codigoEFC}
+- Descripción: ${p.descripcion}
+- Marca: ${p.marca || 'Sin marca'}
+- Similitud vectorial: ${(p.similarity * 100).toFixed(1)}%
+- En Stock: ${p.enStock ? 'Sí' : 'No'}
+- Última venta: ${p.fechaUltimaVenta ? new Date(p.fechaUltimaVenta).toLocaleDateString('es-PE') : 'N/A'}`
+      ).join('\n\n');
+
+      const prompt = `Eres un experto en catálogos de productos industriales y ferretería. Tu trabajo es FILTRAR falsos positivos y confirmar solo los verdaderos duplicados.
+
+NUEVO PRODUCTO QUE SE QUIERE REGISTRAR:
+Descripción: ${newProduct.descripcion}${newProduct.marca ? `\nMarca: ${newProduct.marca}` : ''}${newProduct.modelo ? `\nModelo/Código: ${newProduct.modelo}` : ''}
+
+PRODUCTOS EXISTENTES CON SIMILITUD VECTORIAL ALTA:
+${existingProductsText}
+
+INSTRUCCIONES CRÍTICAS:
+1. Analiza cada producto existente y determina si REALMENTE es:
+   - DUPLICADO EXACTO: Es el mismo producto (solo difiere en typos, orden de palabras, abreviaciones)
+   - VARIANTE: Mismo producto base pero diferente talla/color/tamaño/modelo
+   - FALSO POSITIVO: Producto DIFERENTE que no debe considerarse duplicado
+
+2. CRITERIOS PARA FALSO POSITIVO (NO es duplicado):
+   - Productos de diferente categoría (ej: "LLAVE MIXTA" vs "LLAVE STILLSON" son diferentes)
+   - Diferentes medidas que implican productos distintos (ej: "LLAVE 18MM" vs "LLAVE 11MM" son diferentes)
+   - Diferentes funciones (ej: "MARTILLO DE UÑA" vs "MARTILLO DE BOLA" son diferentes)
+   - Diferente marca SI el usuario especificó una marca concreta
+
+3. CRITERIOS PARA DUPLICADO REAL:
+   - Mismo producto con typos en marca (STANELY = STANLEY)
+   - Mismo producto en diferente idioma (WRENCH = LLAVE)
+   - Mismo producto con abreviaciones (PZAS = PIEZAS, CMT = CM)
+   - Mismo número de parte/código de fabricante
+
+RESPONDE SOLO con un objeto JSON válido (sin markdown):
+{
+  "exists": true/false,
+  "isExactMatch": true/false,
+  "isVariant": true/false,
+  "reason": "explicación clara de tu decisión",
+  "confidence": número entre 0 y 1,
+  "recommendation": "reject" | "accept" | "review",
+  "confirmedDuplicates": [
+    {
+      "codigoEFC": "código del producto confirmado",
+      "descripcion": "descripción completa",
+      "marca": "marca o vacío",
+      "similarity": número original,
+      "enStock": true/false,
+      "fechaUltimaVenta": "fecha o null",
+      "duplicateType": "exact" | "variant" | "similar"
+    }
+  ]
+}
+
+IMPORTANTE:
+- Si NINGÚN producto es realmente duplicado, exists=false y confirmedDuplicates=[]
+- Solo incluye en confirmedDuplicates los que SÍ son duplicados reales
+- Sé ESTRICTO: es mejor dejar pasar un duplicado que marcar como duplicado algo que no lo es
+- El usuario PIERDE CONFIANZA si marcas falsos positivos`;
+
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const text = response.text().trim();
+
+      // Remove markdown code blocks if present
+      const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      const validation = JSON.parse(jsonText);
+
+      // Validate response structure
+      if (typeof validation.exists !== 'boolean' || !validation.recommendation) {
+        throw new Error('Invalid validation response structure');
+      }
+
+      // Ensure confirmedDuplicates is an array
+      if (!Array.isArray(validation.confirmedDuplicates)) {
+        validation.confirmedDuplicates = [];
+      }
+
+      return validation;
+    } catch (error) {
+      this.logger.error(`Failed to validate product with filter: ${error.message}`);
+      // Return a safe default - ask for review but include products for manual check
+      return {
+        exists: existingProducts.length > 0,
+        isExactMatch: false,
+        isVariant: false,
+        reason: `Error en validación AI, se requiere revisión manual: ${error.message}`,
+        confidence: 0,
+        recommendation: 'review',
+        confirmedDuplicates: existingProducts.slice(0, 5).map((p) => ({
+          ...p,
+          duplicateType: 'similar' as const,
+        })),
+      };
+    }
+  }
+
+  /**
    * Quick product identification using LLM knowledge only (NO internet search)
    * Returns basic product information in 1-2 seconds for immediate display
    */

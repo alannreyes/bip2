@@ -671,6 +671,7 @@ export class DuplicatesService {
   /**
    * Validate if a product already exists in the database
    * Uses semantic search + AI to detect exact matches and variants
+   * Returns EFC codes and formatted descriptions for user display
    */
   async validateProductExists(
     collectionName: string,
@@ -685,14 +686,19 @@ export class DuplicatesService {
     reason: string;
     confidence: number;
     matchedProducts: Array<{
-      id: string;
+      codigoEFC: string;
       descripcion: string;
-      marca?: string;
-      modelo?: string;
+      marca: string;
+      similarityPercent: number;
       similarity: number;
-      payload: any;
+      enStock: boolean;
+      fechaUltimaVenta: string | null;
     }>;
     recommendation: 'reject' | 'accept' | 'review';
+    // New formatted output for display
+    duplicatesFound: number;
+    summaryMessage: string;
+    productList: string[];
   }> {
     this.logger.log(`Validating if product exists: ${descripcion}`);
 
@@ -701,14 +707,17 @@ export class DuplicatesService {
       const embedding = await this.geminiService.generateEmbedding(descripcion);
 
       // Step 2: Search for similar products in Qdrant
-      const searchResults = await this.qdrantService.search(
+      const allResults = await this.qdrantService.search(
         collectionName,
         embedding,
-        20, // Get top 20 similar products
-        similarityThreshold,
+        50, // Get more results to filter by threshold
+        undefined, // No filter
       );
 
-      this.logger.log(`Found ${searchResults.length} similar products above threshold ${similarityThreshold}`);
+      // Filter by similarity threshold (Qdrant returns score, not similarity percentage)
+      const searchResults = allResults.filter((r) => r.score >= similarityThreshold);
+
+      this.logger.log(`Found ${searchResults.length} similar products above threshold ${similarityThreshold} (from ${allResults.length} total)`);
 
       // If no similar products found, it's a new product
       if (searchResults.length === 0) {
@@ -720,32 +729,76 @@ export class DuplicatesService {
           confidence: 1.0,
           matchedProducts: [],
           recommendation: 'accept',
+          duplicatesFound: 0,
+          summaryMessage: '✅ Producto nuevo - No se encontraron duplicados',
+          productList: [],
         };
       }
 
-      // Step 3: Prepare matched products for AI validation
-      const matchedProducts = searchResults.map((result) => ({
-        id: String(result.id),
-        descripcion: String(result.payload?.descripcion || result.payload?.description || ''),
-        marca: result.payload?.marca,
-        modelo: result.payload?.modelo,
-        similarity: result.score,
-        payload: result.payload,
-      }));
+      // Step 3: Prepare matched products with EFC codes for AI validation
+      const matchedProductsForAI = searchResults.map((result) => {
+        const payload = result.payload || {};
+        return {
+          id: String(result.id),
+          codigoEFC: String(payload.Articulo_Codigo || payload._original_id || ''),
+          descripcion: String(payload.Articulo_Descripcion || payload.descripcion || payload.description || ''),
+          marca: String(payload.Marca_Descripcion || payload.marca || ''),
+          similarity: result.score,
+          enStock: payload.Articulo_De_Stock === true,
+          fechaUltimaVenta: payload.Fecha_Ultima_Venta || null,
+        };
+      });
 
-      // Step 4: Use AI to validate if the product exists
-      const validation = await this.geminiService.validateProductExists(
+      // Step 4: Use AI to validate and FILTER false positives
+      const validation = await this.geminiService.validateProductExistsWithFilter(
         { descripcion, marca, modelo },
-        matchedProducts,
+        matchedProductsForAI,
       );
 
       this.logger.log(`AI validation result: ${JSON.stringify({
         exists: validation.exists,
         recommendation: validation.recommendation,
         confidence: validation.confidence,
+        filteredCount: validation.confirmedDuplicates?.length || 0,
       })}`);
 
-      // Return complete validation result
+      // Step 5: Build formatted response with only confirmed duplicates
+      const confirmedProducts = validation.confirmedDuplicates || [];
+
+      const matchedProducts = confirmedProducts.map((p) => {
+        // Normalize similarity: LLM might return 98.5 or 0.985
+        const rawSimilarity = p.similarity;
+        const normalizedSimilarity = rawSimilarity > 1 ? rawSimilarity / 100 : rawSimilarity;
+        const similarityPercent = Math.round(normalizedSimilarity * 100);
+
+        return {
+          codigoEFC: p.codigoEFC,
+          descripcion: p.descripcion,
+          marca: p.marca || '',
+          similarityPercent,
+          similarity: normalizedSimilarity,
+          enStock: p.enStock,
+          fechaUltimaVenta: p.fechaUltimaVenta,
+        };
+      });
+
+      // Build user-friendly product list
+      const productList = matchedProducts.map((p) =>
+        `(${p.similarityPercent}%) → ${p.codigoEFC} ${p.descripcion}${p.marca ? ` [${p.marca}]` : ''}`
+      );
+
+      // Build summary message
+      let summaryMessage: string;
+      if (!validation.exists) {
+        summaryMessage = '✅ Producto nuevo - No se encontraron duplicados confirmados';
+      } else if (validation.isExactMatch) {
+        summaryMessage = `⛔ DUPLICADO EXACTO - El producto ya existe con código ${matchedProducts[0]?.codigoEFC}`;
+      } else if (validation.isVariant) {
+        summaryMessage = `⚠️ POSIBLE VARIANTE - Existen productos similares que podrían ser variantes`;
+      } else {
+        summaryMessage = `⚠️ POSIBLES DUPLICADOS - Se encontraron ${matchedProducts.length} producto(s) similar(es)`;
+      }
+
       return {
         exists: validation.exists,
         isExactMatch: validation.isExactMatch,
@@ -754,6 +807,9 @@ export class DuplicatesService {
         confidence: validation.confidence,
         matchedProducts,
         recommendation: validation.recommendation,
+        duplicatesFound: matchedProducts.length,
+        summaryMessage,
+        productList,
       };
     } catch (error) {
       this.logger.error(`Error validating product existence: ${error.message}`);

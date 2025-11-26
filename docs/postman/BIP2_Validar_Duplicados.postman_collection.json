@@ -1,0 +1,365 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "BIP2 - Validar Duplicados",
+		"description": "Colección para validar si un producto ya existe en el catálogo EFC antes de registrarlo.\n\n## Endpoint\n`POST /api/duplicates/validate-exists`\n\n## Respuestas\n- ⛔ `reject` - Producto duplicado, no registrar\n- ✅ `accept` - Producto nuevo, puede registrarse\n- ⚠️ `review` - Requiere revisión manual\n\n## Campos importantes en la respuesta\n- `summaryMessage` - Mensaje para mostrar al usuario\n- `productList` - Lista de productos similares con código EFC\n- `recommendation` - Acción sugerida",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Ejemplos de Validación",
+			"item": [
+				{
+					"name": "1. Duplicado Exacto (typo en marca)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE MIXTA 18MM STANELY 86-863\",\n  \"similarityThreshold\": 0.85\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/duplicates/validate-exists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"duplicates",
+								"validate-exists"
+							]
+						},
+						"description": "## Caso: Duplicado Exacto con Typo\n\nEl operador escribe \"STANELY\" en lugar de \"STANLEY\".\n\n### Resultado esperado:\n- `exists: true`\n- `isExactMatch: true`\n- `recommendation: reject`\n- Encuentra: `16020033 LLAVE MIXTA 18MM STANLEY 86-863`"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Duplicado (PULGADAS = comillas)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE STILLSON 18 PULGADAS STANLEY\",\n  \"similarityThreshold\": 0.85\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/duplicates/validate-exists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"duplicates",
+								"validate-exists"
+							]
+						},
+						"description": "## Caso: Equivalencia de unidades\n\nEl operador escribe \"18 PULGADAS\" pero en el sistema está como `18\"`.\n\n### Resultado esperado:\n- `exists: true`\n- `isExactMatch: true`\n- `recommendation: reject`\n- Encuentra: `16070005 LLAVE STILLSON 18\" STANLEY 87-625`"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Producto Nuevo (no existe)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"TALADRO PERCUTOR INALAMBRICO 20V DEWALT DCD996\",\n  \"marca\": \"DEWALT\",\n  \"similarityThreshold\": 0.85\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/duplicates/validate-exists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"duplicates",
+								"validate-exists"
+							]
+						},
+						"description": "## Caso: Producto Nuevo\n\nProducto que no existe en el catálogo.\n\n### Resultado esperado:\n- `exists: false`\n- `recommendation: accept`\n- `summaryMessage: ✅ Producto nuevo - No se encontraron duplicados`"
+					},
+					"response": []
+				}
+			],
+			"description": "Ejemplos básicos de validación de duplicados"
+		},
+		{
+			"name": "Casos Especiales",
+			"item": [
+				{
+					"name": "4. Idioma diferente (inglés)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"COMBINATION WRENCH 18MM STANLEY 86-863\",\n  \"similarityThreshold\": 0.85\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/duplicates/validate-exists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"duplicates",
+								"validate-exists"
+							]
+						},
+						"description": "## Caso: Descripción en inglés\n\n\"COMBINATION WRENCH\" = \"LLAVE MIXTA\" en español.\n\n### Resultado esperado:\n- Detecta como duplicado de `LLAVE MIXTA 18MM STANLEY`"
+					},
+					"response": []
+				},
+				{
+					"name": "5. Sinónimo regional (DESTORNILLADOR)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"DESTORNILLADOR JUEGO PLANO Y ESTRELLA 10 PIEZAS STANLEY\",\n  \"similarityThreshold\": 0.85\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/duplicates/validate-exists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"duplicates",
+								"validate-exists"
+							]
+						},
+						"description": "## Caso: Sinónimo regional\n\n\"DESTORNILLADOR\" (México/España) = \"DESARMADOR\" (Perú/Chile).\n\n### Resultado esperado:\n- Detecta como duplicado de `DESARMADOR JGO PLANO/ESTRELLA 10 PZAS STANLEY`"
+					},
+					"response": []
+				},
+				{
+					"name": "6. Localismo (HIERRO vs FIERRO)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"ESCOBILLA DE HIERRO CON MANGO DE MADERA\",\n  \"similarityThreshold\": 0.85\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/duplicates/validate-exists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"duplicates",
+								"validate-exists"
+							]
+						},
+						"description": "## Caso: Localismo Perú/España\n\n\"HIERRO\" (España) = \"FIERRO\" (Perú).\n\n### Resultado esperado:\n- Detecta como duplicado de `ESCOBILLA DE FIERRO MANGO MADERA`"
+					},
+					"response": []
+				},
+				{
+					"name": "7. Variante de color",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"CINTURON DE SEGURIDAD 2 PUNTAS COLOR ROJO\",\n  \"similarityThreshold\": 0.85\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/duplicates/validate-exists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"duplicates",
+								"validate-exists"
+							]
+						},
+						"description": "## Caso: Variante de color\n\nMismo producto pero diferente color.\n\n### Resultado esperado:\n- `isVariant: true`\n- Encuentra: `CINTURON DE SEGURIDAD 2 PUNTAS C/NEGRO`"
+					},
+					"response": []
+				},
+				{
+					"name": "8. Marca fusionada (BLACK & DECKER)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE MIXTA 18MM BLACK AND DECKER\",\n  \"similarityThreshold\": 0.80\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/duplicates/validate-exists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"duplicates",
+								"validate-exists"
+							]
+						},
+						"description": "## Caso: Marca del mismo grupo corporativo\n\nBLACK & DECKER y STANLEY son del mismo grupo (Stanley Black & Decker).\n\n### Resultado esperado:\n- Detecta similitud con productos STANLEY existentes"
+					},
+					"response": []
+				}
+			],
+			"description": "Casos especiales: idiomas, sinónimos, localismos, variantes"
+		},
+		{
+			"name": "Utilidades",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"health"
+							]
+						},
+						"description": "Verificar que el servidor está funcionando"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Colecciones",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/collections",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"collections"
+							]
+						},
+						"description": "Ver colecciones disponibles en Qdrant"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de utilidad"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://192.168.18.145:3001",
+			"type": "string"
+		}
+	]
+}
