@@ -12,6 +12,7 @@ import { searchApi } from '@/lib/api';
 interface SearchResult {
   id: string | number;
   score: number;
+  score_vectorial?: number;
   payload: Record<string, any>;
   collection?: string;
   cliente_info?: {
@@ -19,6 +20,13 @@ interface SearchResult {
     cantidad_ventas_cliente: number;
     primera_venta_cliente: string | null;
     ultima_venta_cliente: string | null;
+  };
+  // RTI v2.0 fields
+  rti?: {
+    score_rti: number;
+    categoria_rti: string;
+    evaluado_por: string;
+    razon: string;
   };
 }
 
@@ -29,11 +37,12 @@ export default function TextSearchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchDuration, setSearchDuration] = useState<string>('');
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(3); // RTI v2.0: Default 3 for precision-focused results
   const [marca, setMarca] = useState<string>('');
   const [cliente, setCliente] = useState<string>('');
   const [includeInternetSearch, setIncludeInternetSearch] = useState<boolean>(true);
   const [useLLMFilter, setUseLLMFilter] = useState<boolean>(false); // Default: OFF - trust embeddings
+  const [minRelevancia, setMinRelevancia] = useState<number>(0.50); // RTI v2.0: Minimum relevance threshold
   const [internetResults, setInternetResults] = useState<any>(null);
   const [quickProductInfo, setQuickProductInfo] = useState<any>(null); // Quick identification (shows first)
   const [clientFilterMessage, setClientFilterMessage] = useState<string>(''); // Client filter UX message
@@ -219,6 +228,7 @@ export default function TextSearchPage() {
         ...(marca && { marca: marca.trim() }),
         ...(cliente && { cliente: cliente.trim() }),
         useLLMFilter, // Optional LLM filter
+        minRelevancia, // RTI v2.0: Minimum relevance threshold
       });
 
       setSearchResults(response.data.results);
@@ -405,12 +415,38 @@ export default function TextSearchPage() {
                             htmlFor="llm-filter"
                             className="text-sm font-medium cursor-pointer select-none"
                           >
-                            Activar filtro semántico LLM
+                            Activar filtro semántico LLM (RTI)
                           </label>
                         </div>
                         <p className="text-xs text-gray-500 ml-6 -mt-2">
-                          Filtro avanzado con IA (desactivado por defecto para confiar en embeddings)
+                          Evalúa relevancia técnica industrial con IA para clasificar productos
                         </p>
+
+                        {/* RTI v2.0: Min Relevancia Selector */}
+                        <div className="pt-3">
+                          <label className="block text-sm font-medium mb-2">
+                            Relevancia mínima: <span className="font-mono text-primary">{(minRelevancia * 100).toFixed(0)}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={minRelevancia}
+                            onChange={(e) => setMinRelevancia(parseFloat(e.target.value))}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>Relacionados (30%)</span>
+                            <span>Exactos (100%)</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            {minRelevancia >= 0.85 ? '🎯 Solo productos exactos o equivalentes' :
+                             minRelevancia >= 0.70 ? '✅ Incluye sustitutos válidos' :
+                             minRelevancia >= 0.50 ? '📦 Incluye misma categoría' :
+                             '🔍 Incluye productos relacionados'}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -510,14 +546,49 @@ export default function TextSearchPage() {
                                   {result.collection}
                                 </span>
                               )}
+                              {/* RTI v2.0 Badge */}
+                              {result.rti && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${
+                                  result.rti.categoria_rti === 'EXACTO' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                  result.rti.categoria_rti === 'EQUIVALENTE' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                  result.rti.categoria_rti === 'SUSTITUTO_PERFECTO' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                                  result.rti.categoria_rti === 'SUSTITUTO_VALIDO' ? 'bg-cyan-100 text-cyan-800 border border-cyan-300' :
+                                  result.rti.categoria_rti === 'MISMA_CATEGORIA' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                                  result.rti.categoria_rti === 'RELACIONADO' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                }`}>
+                                  {result.rti.categoria_rti.replace('_', ' ')}
+                                </span>
+                              )}
                             </div>
-                            <div className="text-sm">
-                              <span className="text-muted-foreground">Relevancia: </span>
-                              <span className="font-mono font-medium text-green-600">
-                                {(result.score * 100).toFixed(1)}%
-                              </span>
+                            <div className="text-sm text-right">
+                              {result.rti ? (
+                                <div>
+                                  <span className="text-muted-foreground">RTI: </span>
+                                  <span className="font-mono font-bold text-green-600">
+                                    {(result.rti.score_rti * 100).toFixed(0)}%
+                                  </span>
+                                  <div className="text-xs text-gray-400">
+                                    Vectorial: {((result.score_vectorial || result.score) * 100).toFixed(1)}%
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-muted-foreground">Relevancia: </span>
+                                  <span className="font-mono font-medium text-green-600">
+                                    {(result.score * 100).toFixed(1)}%
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
+
+                          {/* RTI Reason - Only when LLM filter is active */}
+                          {result.rti && result.rti.razon && (
+                            <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                              <span className="font-semibold">IA: </span>{result.rti.razon}
+                            </div>
+                          )}
 
                           {/* Indicadores de disponibilidad - Stock y Lista de Precio */}
                           {result.collection === 'catalogo_efc_200k' && (result.payload.en_stock || result.payload.precio_lista) && (

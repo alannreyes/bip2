@@ -70,7 +70,17 @@ export const syncApi = {
 
 // Search API
 export const searchApi = {
-  searchByText: (params: { query: string; collections: string[]; limit?: number; marca?: string; cliente?: string; includeInternetSearch?: boolean; useLLMFilter?: boolean }) =>
+  searchByText: (params: {
+    query: string;
+    collections: string[];
+    limit?: number;
+    marca?: string;
+    cliente?: string;
+    includeInternetSearch?: boolean;
+    useLLMFilter?: boolean;
+    minRelevancia?: number; // RTI v2.0: Minimum relevance threshold (0.00-1.00)
+    payloadFilters?: Record<string, any>; // RTI v2.0: Payload filters
+  }) =>
     api.post('/search/text', params),
   searchByImage: (file: File, collection: string, limit: number = 10) => {
     const formData = new FormData();
