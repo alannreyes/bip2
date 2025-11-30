@@ -64,12 +64,13 @@ export class SearchController {
     return await this.searchService.searchByTextMultipleCollections(
       dto.query,
       dto.collections,
-      dto.limit || 10,
+      dto.limit ?? 3, // Default 3 for precision-focused results
       dto.marca,
       dto.cliente,
       false, // Never include internet search in this endpoint
       dto.useLLMFilter || false, // Optional LLM filter (default: OFF - trust embeddings)
       dto.payloadFilters, // Optional payload filters for explicit field constraints
+      dto.minRelevancia ?? 0.50, // Filter results below this RTI score threshold
     );
   }
 

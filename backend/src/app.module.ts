@@ -15,6 +15,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { SearchModule } from './search/search.module';
 import { HealthModule } from './health/health.module';
 import { DuplicatesModule } from './duplicates/duplicates.module';
+import { AuthModule } from './auth/auth.module';
+import { PromptsModule } from './prompts/prompts.module';
 
 @Module({
   imports: [
@@ -70,6 +72,8 @@ import { DuplicatesModule } from './duplicates/duplicates.module';
     SearchModule,
     HealthModule,
     DuplicatesModule,
+    AuthModule,
+    PromptsModule,
   ],
 })
 export class AppModule {}

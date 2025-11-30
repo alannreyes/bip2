@@ -1,0 +1,475 @@
+{
+  "info": {
+    "name": "BIP2 - Sistema RTI v2.0",
+    "description": "Colección de endpoints para el Sistema de Relevancia Técnica Industrial v2.0\n\n## Nuevas funcionalidades:\n- Score RTI continuo (0.0-1.0)\n- Endpoint /api/duplicates/compare\n- Sistema de gestión de prompts\n- Autenticación JWT para admin\n\n## Escala RTI:\n- 1.00: EXACTO\n- 0.95: EQUIVALENTE\n- 0.85: SUSTITUTO_PERFECTO\n- 0.70: SUSTITUTO_VALIDO\n- 0.50: MISMA_CATEGORIA\n- 0.30: RELACIONADO\n- 0.10: IRRELEVANTE\n- 0.00: RECHAZADO",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://192.168.40.197:3001/api"
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "🔍 Comparación de Productos",
+      "item": [
+        {
+          "name": "Compare - Solo embeddings (rápido)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"descripcion1\": \"LLAVE MIXTA 13MM TRUPER\",\n    \"descripcion2\": \"LLAVE COMBINADA 13 MILIMETROS TRUPER\",\n    \"useLLMFilter\": false\n}"
+            },
+            "url": "{{base_url}}/duplicates/compare",
+            "description": "Compara dos productos usando solo embeddings (más rápido, ~100ms)"
+          }
+        },
+        {
+          "name": "Compare - Embeddings + LLM (preciso)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"descripcion1\": \"LLAVE MIXTA 13MM TRUPER\",\n    \"descripcion2\": \"LLAVE COMBINADA 13 MILIMETROS TRUPER\",\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/duplicates/compare",
+            "description": "Compara productos usando embeddings + LLM para clasificación RTI precisa"
+          }
+        },
+        {
+          "name": "Compare - Mismo producto, diferente marca",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"descripcion1\": \"LLAVE STILLSON 18 PULGADAS\",\n    \"descripcion2\": \"LLAVE STILLSON 18 PULGADAS\",\n    \"marca1\": \"TRUPER\",\n    \"marca2\": \"STANLEY\",\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/duplicates/compare",
+            "description": "Espera clasificación: SUSTITUTO_PERFECTO (0.85)"
+          }
+        },
+        {
+          "name": "Compare - Productos relacionados",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"descripcion1\": \"TALADRO ROTOMARTILLO 1/2 DEWALT\",\n    \"descripcion2\": \"BROCA PARA CONCRETO 1/2 X 6 TRUPER\",\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/duplicates/compare",
+            "description": "Espera clasificación: RELACIONADO (0.30) - son complementarios"
+          }
+        },
+        {
+          "name": "Compare - Productos irrelevantes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"descripcion1\": \"LLAVE MIXTA 13MM TRUPER\",\n    \"descripcion2\": \"PINTURA VINILICA BLANCA 19L\",\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/duplicates/compare",
+            "description": "Espera clasificación: IRRELEVANTE o RECHAZADO"
+          }
+        },
+        {
+          "name": "Compare - Equivalencias de unidades",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"descripcion1\": \"LLAVE FRANCESA 12 PULGADAS TRUPER\",\n    \"descripcion2\": \"ADJUSTABLE WRENCH 305MM TRUPER\",\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/duplicates/compare",
+            "description": "12\" = 305mm aprox. Espera: EQUIVALENTE (0.95)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔎 Búsqueda con minRelevancia",
+      "item": [
+        {
+          "name": "Search - Solo exactos (minRelevancia=0.95)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collections\": [\"catalogo_stock\"],\n    \"query\": \"LLAVE MIXTA 13MM\",\n    \"limit\": 10,\n    \"minRelevancia\": 0.95,\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/search/text",
+            "description": "Solo devuelve EXACTO o EQUIVALENTE"
+          }
+        },
+        {
+          "name": "Search - Sustitutos válidos (minRelevancia=0.70)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collections\": [\"catalogo_stock\"],\n    \"query\": \"LLAVE MIXTA 13MM\",\n    \"limit\": 10,\n    \"minRelevancia\": 0.70,\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/search/text",
+            "description": "Incluye EXACTO, EQUIVALENTE, SUSTITUTO_PERFECTO, SUSTITUTO_VALIDO"
+          }
+        },
+        {
+          "name": "Search - Misma categoría (minRelevancia=0.50)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collections\": [\"catalogo_stock\"],\n    \"query\": \"LLAVE MIXTA 13MM\",\n    \"limit\": 10,\n    \"minRelevancia\": 0.50,\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/search/text",
+            "description": "Default - incluye hasta MISMA_CATEGORIA"
+          }
+        },
+        {
+          "name": "Search - Incluir relacionados (minRelevancia=0.30)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collections\": [\"catalogo_stock\"],\n    \"query\": \"TALADRO ROTOMARTILLO\",\n    \"limit\": 20,\n    \"minRelevancia\": 0.30,\n    \"useLLMFilter\": true\n}"
+            },
+            "url": "{{base_url}}/search/text",
+            "description": "Incluye accesorios y productos relacionados"
+          }
+        },
+        {
+          "name": "Search - Sin filtro LLM (solo embeddings)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collections\": [\"catalogo_stock\"],\n    \"query\": \"LLAVE MIXTA 13MM\",\n    \"limit\": 10,\n    \"useLLMFilter\": false\n}"
+            },
+            "url": "{{base_url}}/search/text",
+            "description": "Búsqueda rápida usando solo embeddings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Autenticación",
+      "item": [
+        {
+          "name": "Generar token admin (local)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/health",
+            "description": "Para generar token, ejecutar en servidor:\n\nnpx ts-node scripts/generate-admin-token.ts\n\nLuego copiar el token y guardarlo en la variable admin_token"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📝 Gestión de Prompts (Admin)",
+      "item": [
+        {
+          "name": "Listar todos los prompts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/prompts",
+            "description": "Lista todos los prompts con sus versiones y estados"
+          }
+        },
+        {
+          "name": "Obtener prompt activo por nombre",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/prompts/filter_search_results",
+            "description": "Obtiene el prompt activo para filter_search_results"
+          }
+        },
+        {
+          "name": "Crear nuevo draft de prompt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"filter_search_results\",\n    \"content\": \"Eres un clasificador de relevancia técnica industrial...\\n\\nESCALA RTI:\\n- 1.00: EXACTO\\n- 0.95: EQUIVALENTE\\n...\",\n    \"changeDescription\": \"Ajuste de escala RTI para mejor precisión\"\n}"
+            },
+            "url": "{{base_url}}/prompts",
+            "description": "Crea una nueva versión del prompt como draft"
+          }
+        },
+        {
+          "name": "Probar prompt con datos de ejemplo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"LLAVE MIXTA 13MM\",\n    \"products\": [\n        {\n            \"id\": \"test-1\",\n            \"descripcion\": \"LLAVE COMBINADA 13MM TRUPER\",\n            \"marca\": \"TRUPER\"\n        },\n        {\n            \"id\": \"test-2\",\n            \"descripcion\": \"LLAVE MIXTA 14MM TRUPER\",\n            \"marca\": \"TRUPER\"\n        },\n        {\n            \"id\": \"test-3\",\n            \"descripcion\": \"DESARMADOR PLANO 1/4 TRUPER\",\n            \"marca\": \"TRUPER\"\n        }\n    ]\n}"
+            },
+            "url": "{{base_url}}/prompts/:promptId/test",
+            "description": "Prueba un prompt draft con datos de ejemplo antes de activarlo. Reemplazar :promptId con el ID del prompt."
+          }
+        },
+        {
+          "name": "Activar prompt draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/prompts/:promptId/activate",
+            "description": "Activa un prompt draft, archivando el activo anterior. Reemplazar :promptId."
+          }
+        },
+        {
+          "name": "Rollback a versión anterior",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/prompts/filter_search_results/rollback",
+            "description": "Revierte a una versión específica del prompt"
+          }
+        },
+        {
+          "name": "Resetear prompt a default",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/prompts/filter_search_results/reset",
+            "description": "Restaura el prompt a su valor por defecto del código"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Validación de Duplicados",
+      "item": [
+        {
+          "name": "Validate Exists - Producto exacto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collection\": \"catalogo_stock\",\n    \"descripcion\": \"LLAVE MIXTA 13MM TRUPER\",\n    \"similarityThreshold\": 0.90\n}"
+            },
+            "url": "{{base_url}}/duplicates/validate-exists",
+            "description": "Verifica si un producto ya existe en el catálogo"
+          }
+        },
+        {
+          "name": "Validate Exists - Con marca y modelo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collection\": \"catalogo_stock\",\n    \"descripcion\": \"LLAVE STILLSON 18 PULGADAS\",\n    \"marca\": \"TRUPER\",\n    \"modelo\": \"15839\",\n    \"similarityThreshold\": 0.85\n}"
+            },
+            "url": "{{base_url}}/duplicates/validate-exists",
+            "description": "Validación con marca y modelo para mayor precisión"
+          }
+        },
+        {
+          "name": "Detect Duplicates - En colección",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collection\": \"catalogo_stock\",\n    \"similarityThreshold\": 0.95,\n    \"limit\": 50,\n    \"useAiClassification\": false\n}"
+            },
+            "url": "{{base_url}}/duplicates/detect",
+            "description": "Detecta grupos de productos duplicados en una colección"
+          }
+        },
+        {
+          "name": "Detect Duplicates - Con clasificación AI",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"collection\": \"catalogo_stock\",\n    \"similarityThreshold\": 0.90,\n    \"limit\": 20,\n    \"useAiClassification\": true,\n    \"filters\": {\n        \"familia\": \"HERRAMIENTAS\"\n    }\n}"
+            },
+            "url": "{{base_url}}/duplicates/detect",
+            "description": "Con filtros y clasificación LLM para mayor precisión"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏥 Health & Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/health"
+          }
+        },
+        {
+          "name": "Qdrant Collections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/collections"
+          }
+        },
+        {
+          "name": "Datasources List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/datasources"
+          }
+        }
+      ]
+    }
+  ]
+}

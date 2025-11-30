@@ -92,4 +92,30 @@ export class DuplicatesController {
       threshold,
     );
   }
+
+  /**
+   * POST /api/duplicates/compare
+   * Compare two product descriptions directly
+   * Returns similarity score and optional LLM classification
+   */
+  @Post('compare')
+  async compareProducts(
+    @Body('descripcion1') descripcion1: string,
+    @Body('descripcion2') descripcion2: string,
+    @Body('marca1') marca1?: string,
+    @Body('marca2') marca2?: string,
+    @Body('useLLMFilter') useLLMFilter?: boolean,
+  ) {
+    if (!descripcion1 || !descripcion2) {
+      throw new Error('descripcion1 and descripcion2 are required');
+    }
+
+    return await this.duplicatesService.compareProducts(
+      descripcion1,
+      descripcion2,
+      marca1,
+      marca2,
+      useLLMFilter || false,
+    );
+  }
 }

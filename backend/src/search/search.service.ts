@@ -4,6 +4,55 @@ import { QdrantService } from '../qdrant/qdrant.service';
 import { DatasourcesService } from '../datasources/datasources.service';
 import { Observable } from 'rxjs';
 
+/**
+ * Mapeo de campos del payload - adapta nombres genéricos a los campos reales del catálogo
+ * Esto permite que el código funcione con diferentes estructuras de datos
+ */
+const PAYLOAD_FIELDS = {
+  // Campos de producto
+  descripcion: ['Articulo_Descripcion', 'descripcion', 'description', 'nombre'],
+  marca: ['Marca_Descripcion', 'marca', 'brand'],
+  categoria: ['Categoria_Descripcion', 'categoria', 'category'],
+  familia: ['Familia_Descripcion', 'familia'],
+  subfamilia: ['Sub_Familia_Descripcion', 'subfamilia'],
+  codigo: ['Articulo_Codigo', 'codigo', 'sku'],
+  modelo: ['Articulo_Numero_Parte', 'modelo', 'model'],
+
+  // Campos comerciales
+  en_stock: ['Articulo_De_Stock', 'en_stock', 'in_stock'],
+  precio_lista: ['Articulo_Lista_Costo', 'precio_lista', 'has_price'],
+  ventas_3_anios: ['Cantidad_Ventas_Ultimos_3_Anios', 'ventas_3_anios', 'sales'],
+  fecha_ultima_venta: ['Fecha_Ultima_Venta', 'fecha_ultima_venta', 'last_sale'],
+};
+
+/**
+ * Helper para obtener un campo del payload usando el mapeo
+ */
+function getPayloadField(payload: any, fieldName: keyof typeof PAYLOAD_FIELDS, defaultValue: any = ''): any {
+  if (!payload) return defaultValue;
+  const possibleFields = PAYLOAD_FIELDS[fieldName];
+  for (const field of possibleFields) {
+    if (payload[field] !== undefined && payload[field] !== null) {
+      return payload[field];
+    }
+  }
+  return defaultValue;
+}
+
+/**
+ * Infiere la categoría RTI desde un score vectorial (usado cuando LLM está deshabilitado)
+ */
+function inferRtiFromScore(score: number): { categoria: string; score_rti: number } {
+  if (score >= 0.95) return { categoria: 'EXACTO', score_rti: 1.00 };
+  if (score >= 0.90) return { categoria: 'EQUIVALENTE', score_rti: 0.95 };
+  if (score >= 0.80) return { categoria: 'SUSTITUTO_PERFECTO', score_rti: 0.85 };
+  if (score >= 0.65) return { categoria: 'SUSTITUTO_VALIDO', score_rti: 0.70 };
+  if (score >= 0.45) return { categoria: 'MISMA_CATEGORIA', score_rti: 0.50 };
+  if (score >= 0.25) return { categoria: 'RELACIONADO', score_rti: 0.30 };
+  if (score >= 0.10) return { categoria: 'IRRELEVANTE', score_rti: 0.10 };
+  return { categoria: 'RECHAZADO', score_rti: 0.00 };
+}
+
 @Injectable()
 export class SearchService {
   private readonly logger = new Logger(SearchService.name);
@@ -17,14 +66,15 @@ export class SearchService {
   async searchByText(
     query: string,
     collectionName: string,
-    limit: number = 10,
+    limit: number = 3, // Default reduced to 3 for precision-focused results
     marca?: string,
     cliente?: string,
     useLLMFilter: boolean = false,
     payloadFilters?: { [key: string]: any },
+    minRelevancia: number = 0.50, // Minimum relevance threshold (applies to vectorial or RTI score)
   ): Promise<any> {
     this.logger.log(`Searching by text in collection: ${collectionName}`);
-    this.logger.debug(`Query: ${query}${marca ? `, Marca: ${marca}` : ''}${cliente ? `, Cliente: ${cliente}` : ''}${payloadFilters ? `, Payload Filters: ${JSON.stringify(payloadFilters)}` : ''} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'}`);
+    this.logger.debug(`Query: ${query}${marca ? `, Marca: ${marca}` : ''}${cliente ? `, Cliente: ${cliente}` : ''}${payloadFilters ? `, Payload Filters: ${JSON.stringify(payloadFilters)}` : ''} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${minRelevancia}`);
 
     const startTime = Date.now();
 
@@ -36,8 +86,7 @@ export class SearchService {
         this.logger.log(`Converting marca parameter to payload filter: ${marca}`);
       }
 
-      // Step 2: Extract keywords from query for hybrid boosting (attention mechanism)
-      // If marca filter is provided, append to query for better semantic search
+      // Step 2: Extract keywords from query for attention mechanism
       let enhancedQuery = query;
       const keywords = this.extractKeywords(query);
 
@@ -68,94 +117,132 @@ export class SearchService {
       this.logger.debug('Generating embedding from attention query...');
       const embedding = await this.geminiService.generateEmbedding(attentionQuery);
 
-      // Step 7: Search in Qdrant with filters (hybrid search)
-      // If no filters, fetch more results for re-ranking (3x instead of 2x)
-      // If marca or cliente filter is active, multiply by 10x to ensure enough results after filtering
+      // Step 6: Calculate search limit based on mode
+      // LLM ON: fetch 2x candidates for LLM to evaluate and rerank
+      // LLM OFF: fetch exactly what's requested
+      // Marca/Cliente filters: expand to ensure enough results after filtering
+      const LLM_MULTIPLIER = 2;
       const FILTER_MULTIPLIER = 10;
-      let searchLimit = qdrantFilter === null ? Math.max(limit * 3, 20) : Math.max(limit * 2, 15);
+      let searchLimit: number;
 
-      // Expand search when either marca or cliente filter is active
       if (marca || cliente) {
+        // Expand search when filters are active
         searchLimit = limit * FILTER_MULTIPLIER;
         const activeFilters = [marca ? 'marca' : null, cliente ? 'cliente' : null].filter(Boolean).join(' + ');
-        this.logger.log(`Filter active (${activeFilters}), expanding search to ${searchLimit} results (${FILTER_MULTIPLIER}x multiplier)`);
+        this.logger.log(`Filter active (${activeFilters}), expanding search to ${searchLimit} results`);
+      } else if (useLLMFilter) {
+        // LLM mode: fetch 2x for better reranking
+        searchLimit = limit * LLM_MULTIPLIER;
+        this.logger.log(`LLM mode: fetching ${searchLimit} candidates (${limit}×${LLM_MULTIPLIER})`);
+      } else {
+        // Direct mode: fetch exactly what's needed
+        searchLimit = limit;
       }
 
       this.logger.debug(`Searching in Qdrant collection: ${collectionName} (limit: ${searchLimit})${qdrantFilter ? ' with filters' : ' without filters'}`);
       const searchResults = await this.qdrantService.search(collectionName, embedding, searchLimit, qdrantFilter);
 
-      // Step 8: Re-rank results using hybrid scoring
-      this.logger.debug('Re-ranking results with keyword boosting...');
-      const reRankedResults = this.reRankResults(searchResults, keywords);
+      // Step 8: NO BOOST - Trust Qdrant's vectorial scores directly
+      // The embedding quality from Gemini is sufficient for accurate ranking
+      this.logger.debug('Using pure Qdrant vectorial scores (no keyword boost)');
 
-      // Step 9: LLM Semantic Filter - OPTIONAL (disabled by default to trust embeddings)
+      // Step 7: LLM Semantic Filter OR Vectorial Filter
       let semanticallyFiltered: any[];
 
       if (useLLMFilter) {
-        this.logger.log('LLM Filter ENABLED - Applying semantic filter...');
+        this.logger.log('LLM Filter ENABLED - Evaluating ALL candidates with RTI...');
         const llmFilterStart = Date.now();
 
-        // Prepare products for LLM evaluation (take more candidates when filters are active)
-        // Use larger candidate pool when marca or cliente filter is active to ensure proper filtering
-        const llmCandidateCount = (marca || cliente) ? 100 : 20;
-        const candidatesForLLM = reRankedResults.slice(0, llmCandidateCount);
-        const productsForLLM = candidatesForLLM.map(r => ({
-          id: String(r.payload?.id || r.id),
-          descripcion: r.payload?.descripcion || '',
-          marca: r.payload?.marca || '',
-          categoria: r.payload?.categoria || '',
+        // Evaluate ALL candidates from Qdrant (not just top 20)
+        // This ensures proper RTI reranking of all results
+        const productsForLLM = searchResults.map(r => ({
+          id: String(r.id), // Use Qdrant UUID, not payload.id
+          descripcion: getPayloadField(r.payload, 'descripcion', ''),
+          marca: getPayloadField(r.payload, 'marca', ''),
+          categoria: getPayloadField(r.payload, 'categoria', ''),
+          codigo: getPayloadField(r.payload, 'codigo', ''),
           score: r.score,
         }));
+
+        this.logger.log(`Sending ${productsForLLM.length} candidates to LLM for RTI evaluation`);
 
         // Use enhanced query (includes marca if present) for LLM evaluation
         const llmResults = await this.geminiService.filterSearchResults(enhancedQuery, productsForLLM);
         const llmFilterDuration = Date.now() - llmFilterStart;
-        this.logger.log(`LLM filter completed in ${llmFilterDuration}ms`);
+        this.logger.log(`LLM filter completed in ${llmFilterDuration}ms - evaluated ${llmResults.length} products`);
 
         // Create a map of LLM evaluations
         const llmEvaluationMap = new Map(llmResults.map(r => [r.id, r]));
 
-        // Filter and re-score based on LLM evaluation
-        semanticallyFiltered = reRankedResults
+        // Map results with RTI scores
+        semanticallyFiltered = searchResults
           .map(result => {
-            const resultId = String(result.payload?.id || result.id);
+            const resultId = String(result.id);
             const llmEval = llmEvaluationMap.get(resultId);
 
             if (!llmEval) {
-              // If not evaluated by LLM (beyond top candidates), keep with original score
-              return result;
+              // Should not happen since we evaluate ALL, but fallback just in case
+              this.logger.warn(`Product ${resultId} not evaluated by LLM`);
+              return {
+                ...result,
+                _score_vectorial: result.score,
+                _rti_score: 0, // Assume irrelevant if not evaluated
+                _rti_categoria: 'NO_EVALUADO',
+              };
             }
 
-            // Add LLM metadata to result
+            // Add RTI metadata - USE RTI SCORE AS PRIMARY SCORE
             return {
               ...result,
               _llm_match: llmEval.match,
               _llm_confidence: llmEval.confidence,
               _llm_reason: llmEval.reason,
-              score: llmEval.adjustedScore,
+              _rti_score: llmEval.score_rti,
+              _rti_categoria: llmEval.categoria_rti,
+              _score_vectorial: result.score,
+              score: llmEval.score_rti, // RTI score for ranking
             };
           })
-          // Filter out non-matches
+          // Filter by minRelevancia (RTI score must be >= threshold)
           .filter(r => {
-            // If LLM evaluated it, only keep matches
-            if (r._llm_match !== undefined) {
-              return r._llm_match === true;
+            const passesThreshold = r.score >= minRelevancia;
+            if (!passesThreshold) {
+              this.logger.debug(`Filtered out ${r.id}: RTI=${r.score} < minRelevancia=${minRelevancia}`);
             }
-            // Keep results that weren't evaluated
-            return true;
+            return passesThreshold;
           })
-          // Re-sort by adjusted score
-          .sort((a, b) => b.score - a.score);
+          // Sort by RTI score (descending)
+          .sort((a, b) => b.score - a.score)
+          // Trim to requested limit
+          .slice(0, limit);
 
-        this.logger.log(`After LLM filter: ${semanticallyFiltered.length} relevant results`);
+        this.logger.log(`After RTI filter (≥${minRelevancia}): ${semanticallyFiltered.length} results`);
+
       } else {
-        // LLM filter DISABLED - trust embeddings directly
-        this.logger.log('LLM Filter DISABLED - trusting embedding similarity scores');
-        semanticallyFiltered = reRankedResults;
+        // LLM filter DISABLED - use Qdrant vectorial scores with minRelevancia filter
+        this.logger.log('LLM Filter DISABLED - using Qdrant vectorial scores');
+
+        semanticallyFiltered = searchResults
+          .map(r => ({
+            ...r,
+            _score_vectorial: r.score,
+          }))
+          // Filter by minRelevancia (vectorial score must be >= threshold)
+          .filter(r => {
+            const passesThreshold = r.score >= minRelevancia;
+            if (!passesThreshold) {
+              this.logger.debug(`Filtered out ${r.id}: vectorial=${r.score} < minRelevancia=${minRelevancia}`);
+            }
+            return passesThreshold;
+          })
+          // Already sorted by Qdrant, just trim
+          .slice(0, limit);
+
+        this.logger.log(`After vectorial filter (≥${minRelevancia}): ${semanticallyFiltered.length} results`);
       }
 
-      // Step 10: Trim to requested limit (or keep all if cliente filter will be applied)
-      let finalResults = cliente ? semanticallyFiltered : semanticallyFiltered.slice(0, limit);
+      // Step 8: Final results (already filtered and trimmed)
+      let finalResults = semanticallyFiltered;
 
       // Step 11: Enrich with client purchase data if cliente filter is provided
       let clientDataStatus = 'not_requested'; // 'not_requested' | 'success' | 'no_data' | 'error'
@@ -216,21 +303,41 @@ export class SearchService {
               ? `El cliente ${cliente} no ha comprado ninguno de estos productos. Mostrando todos los resultados.`
               : `Mostrando ${finalResults.filter(r => r._vendido_a_cliente).length} productos vendidos al cliente ${cliente}.`,
         }),
-        results: finalResults.map((result) => ({
-          id: result.id,
-          score: result.score,
-          payload: result.payload,
-          // ONLY include cliente_info if we successfully fetched client data
-          // If there was an error connecting to DB, don't show misleading "Not sold" info
-          ...(cliente && clientDataStatus !== 'error' && {
-            cliente_info: {
-              vendido_a_cliente: result._vendido_a_cliente || false,
-              cantidad_ventas_cliente: result._cantidad_ventas_cliente || 0,
-              primera_venta_cliente: result._primera_venta_cliente || null,
-              ultima_venta_cliente: result._ultima_venta_cliente || null,
-            },
-          }),
-        })),
+        results: finalResults.map((result) => {
+          // Calcular RTI info - usar LLM si existe, sino inferir del score vectorial
+          const rtiInfo = result._rti_categoria
+            ? {
+                score_rti: result._rti_score,
+                categoria_rti: result._rti_categoria,
+                evaluado_por: 'llm' as const,
+                razon: result._llm_reason,
+              }
+            : {
+                ...inferRtiFromScore(result._score_vectorial || result.score),
+                evaluado_por: 'vectorial' as const,
+                razon: 'Inferido desde score de similitud vectorial',
+              };
+
+          return {
+            id: result.id,
+            // score = RTI score (when LLM) or vectorial score (when no LLM)
+            score: result.score,
+            // Always include vectorial score for reference
+            score_vectorial: result._score_vectorial || result.score,
+            rti: rtiInfo,
+            payload: result.payload,
+            // ONLY include cliente_info if we successfully fetched client data
+            // If there was an error connecting to DB, don't show misleading "Not sold" info
+            ...(cliente && clientDataStatus !== 'error' && {
+              cliente_info: {
+                vendido_a_cliente: result._vendido_a_cliente || false,
+                cantidad_ventas_cliente: result._cantidad_ventas_cliente || 0,
+                primera_venta_cliente: result._primera_venta_cliente || null,
+                ultima_venta_cliente: result._ultima_venta_cliente || null,
+              },
+            }),
+          };
+        }),
       };
     } catch (error) {
       this.logger.error(`Text search failed: ${error.message}`, error.stack);
@@ -611,6 +718,13 @@ export class SearchService {
   }
 
   /**
+   * @deprecated NO LONGER USED - Boost has been removed from search flow
+   *
+   * The boost logic distorted scores (saturating to 1.0) and conflicted with RTI rerank.
+   * Now we trust Qdrant's pure vectorial scores and use RTI for reranking when LLM is enabled.
+   *
+   * This method is kept for reference but should be removed in a future cleanup.
+   *
    * Re-rank results by boosting exact keyword matches with weighted priorities
    * and commercial factors (stock, sales, recency)
    */
@@ -624,9 +738,9 @@ export class SearchService {
         .join(' ')
         .toLowerCase();
 
-      // Get brand field specifically (marca in Spanish)
-      const brandField = (result.payload.marca || '').toLowerCase();
-      const descriptionField = (result.payload.descripcion || result.payload.description || '').toLowerCase();
+      // Get brand field specifically (marca in Spanish) - usando mapeo de campos
+      const brandField = getPayloadField(result.payload, 'marca', '').toLowerCase();
+      const descriptionField = getPayloadField(result.payload, 'descripcion', '').toLowerCase();
 
       // === KEYWORD MATCHING ===
       let productCoreMatches = 0;
@@ -697,19 +811,22 @@ export class SearchService {
       let recencyBoost = 0;
 
       // 1. Stock availability boost (heavily reduced to prioritize precision)
-      const inStock = result.payload.en_stock === true || result.payload.en_stock === 'true';
+      const stockValue = getPayloadField(result.payload, 'en_stock', false);
+      const inStock = stockValue === true || stockValue === 'true' || stockValue === 'S' || stockValue === 'Si' || stockValue === 'SI';
       if (inStock) {
         stockBoost = 0.04; // +4% for in-stock items (reduced from 6%)
       }
 
       // 2. Active product boost (has price list)
-      const hasPriceList = result.payload.precio_lista === true || result.payload.precio_lista === 'true';
+      const priceValue = getPayloadField(result.payload, 'precio_lista', 0);
+      const hasPriceList = priceValue > 0 || priceValue === true || priceValue === 'true';
       if (hasPriceList) {
         priceListBoost = 0.02; // +2% for active products (reduced from 3%)
       }
 
       // 3. Sales volume boost (ventas_3_anios) - heavily reduced
-      const sales = parseInt(result.payload.ventas_3_anios || '0') || 0;
+      const salesValue = getPayloadField(result.payload, 'ventas_3_anios', 0);
+      const sales = parseInt(String(salesValue)) || 0;
       if (sales >= 50) {
         salesBoost = 0.03; // +3% for very popular items (reduced from 4%)
       } else if (sales >= 20) {
@@ -723,7 +840,7 @@ export class SearchService {
       }
 
       // 4. Recency boost (fecha_ultima_venta) - heavily reduced
-      const lastSaleDate = result.payload.fecha_ultima_venta;
+      const lastSaleDate = getPayloadField(result.payload, 'fecha_ultima_venta', null);
       if (lastSaleDate) {
         try {
           const lastSale = new Date(lastSaleDate);
@@ -743,26 +860,37 @@ export class SearchService {
       }
 
       // Calculate total boost
-      // Product Core matching is ABSOLUTE PRIORITY - massive boost/penalty
-      // Keyword matching weights: productCore (0.30 HUGE!), brand (0.25 CRITICAL!), dimension (0.08), regular (0.02)
-      // Commercial weights: stock (0.04), price list (0.02), sales (0.03 max), recency (0.02 max)
+      // STRATEGY: Embeddings already handle semantic similarity well
+      // Boost should only help with: exact dimensions, brand preference, commercial factors
+      // AVOID boosting on generic terms like "LLAVE MIXTA" - embeddings already capture that
       let boost = 1.0;
 
-      // CRITICAL: Product Core - defines if product is in right category
+      // Product Core matching - SOFT boost, not huge
+      // Embeddings already rank similar products high, we just add slight preference
       if (keywords.productCore.length > 0) {
         if (productCoreMatches > 0) {
-          boost += productCoreMatches * 0.30;  // +30% per product core match (MASSIVE!)
+          // Small boost for category match - embeddings already handle this
+          boost += 0.05;  // +5% flat for being in right category
         } else {
-          // HUGE penalty if product core specified but doesn't match
-          boost *= 0.40;  // Reduce to 40% of original (60% penalty)
+          // Penalty if product core specified but doesn't match
+          boost *= 0.60;  // Reduce to 60% of original (40% penalty)
         }
       }
 
-      // CRITICAL: Brand match - when user specifies a brand, it's very important
-      // Increased from +5% to +25% to ensure branded products rank higher
-      boost += brandMatches * 0.25;        // +25% per brand match (CRITICAL for central de compras!)
-      boost -= brandMismatches * 0.15;     // -15% per brand mismatch
-      boost += dimensionMatches * 0.08;    // +8% per dimension match
+      // DIMENSION MATCHING - THE KEY DIFFERENTIATOR
+      // This is critical for RTI: 13MM ≠ 25MM even though both are "LLAVE MIXTA"
+      if (keywords.dimensions.length > 0) {
+        if (dimensionMatches > 0) {
+          boost += dimensionMatches * 0.20;  // +20% per dimension match (HIGH PRIORITY!)
+        } else {
+          // Penalty for wrong dimension - this is what distinguishes SUSTITUTO_VALIDO from MISMA_CATEGORIA
+          boost *= 0.70;  // Reduce to 70% if dimension doesn't match
+        }
+      }
+
+      // Brand matching - important when specified
+      boost += brandMatches * 0.10;        // +10% per brand match
+      boost -= brandMismatches * 0.10;     // -10% per brand mismatch
       boost += regularMatches * 0.02;      // +2% per regular keyword match
       boost += stockBoost;                 // +4% if in stock
       boost += priceListBoost;             // +2% if active product
@@ -820,41 +948,17 @@ export class SearchService {
       const extractedText = await this.geminiService.extractTextFromImage(imageBuffer, mimeType);
       this.logger.debug(`Extracted text: ${extractedText.substring(0, 100)}...`);
 
-      // Step 2: Extract keywords for hybrid boosting (attention mechanism)
-      const keywords = this.extractKeywords(extractedText);
-      this.logger.debug(
-        `Extracted keywords - productCore: [${keywords.productCore.join(', ')}], ` +
-        `brands: [${keywords.brands.join(', ')}], ` +
-        `models: [${keywords.models.join(', ')}], ` +
-        `dimensions: [${keywords.dimensions.join(', ')}], ` +
-        `colors: [${keywords.colors.join(', ')}], ` +
-        `materials: [${keywords.materials.join(', ')}], ` +
-        `presentations: [${keywords.presentations.join(', ')}], ` +
-        `regular: [${keywords.regular.join(', ')}]`
-      );
+      // Step 2: Generate embedding directly from extracted text
+      // NO BOOST - trust Qdrant's vectorial similarity
+      this.logger.debug('Generating embedding from extracted text...');
+      const embedding = await this.geminiService.generateEmbedding(extractedText);
 
-      // Step 3: Build attention-based query structure
-      const attentionQuery = this.buildAttentionQuery(extractedText, keywords);
+      // Step 3: Search in Qdrant (no filters for image search)
+      this.logger.debug(`Searching in Qdrant collection: ${collectionName} (limit: ${limit})`);
+      const searchResults = await this.qdrantService.search(collectionName, embedding, limit, null);
 
-      // Step 4: Build Qdrant filter for hybrid search
-      const qdrantFilter = this.buildQdrantFilter(keywords);
-
-      // Step 5: Generate embedding from attention-structured query
-      this.logger.debug('Generating embedding from attention query...');
-      const embedding = await this.geminiService.generateEmbedding(attentionQuery);
-
-      // Step 5: Search in Qdrant with filters (hybrid search)
-      // If no filters, fetch more results for re-ranking (3x instead of 2x)
-      const searchLimit = qdrantFilter === null ? Math.max(limit * 3, 20) : Math.max(limit * 2, 15);
-      this.logger.debug(`Searching in Qdrant collection: ${collectionName} (limit: ${searchLimit})${qdrantFilter ? ' with filters' : ' without filters'}`);
-      const searchResults = await this.qdrantService.search(collectionName, embedding, searchLimit, qdrantFilter);
-
-      // Step 5: Re-rank results using hybrid scoring
-      this.logger.debug('Re-ranking results with keyword boosting...');
-      const reRankedResults = this.reRankResults(searchResults, keywords);
-
-      // Step 6: Trim to requested limit
-      const finalResults = reRankedResults.slice(0, limit);
+      // Step 4: Return results with pure vectorial scores (NO BOOST)
+      const finalResults = searchResults.slice(0, limit);
 
       const endTime = Date.now();
       const duration = endTime - startTime;
@@ -867,6 +971,7 @@ export class SearchService {
         results: finalResults.map((result) => ({
           id: result.id,
           score: result.score,
+          score_vectorial: result.score,
           payload: result.payload,
         })),
       };
@@ -969,14 +1074,15 @@ export class SearchService {
   async searchByTextMultipleCollections(
     query: string,
     collectionNames: string[],
-    limit: number = 10,
+    limit: number = 3, // Default reduced to 3 for precision-focused results
     marca?: string,
     cliente?: string,
     includeInternetSearch: boolean = false,
     useLLMFilter: boolean = false,
     payloadFilters?: { [key: string]: any },
+    minRelevancia: number = 0.50,
   ): Promise<any> {
-    this.logger.log(`Searching by text in ${collectionNames.length} collections: ${collectionNames.join(', ')} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'}`);
+    this.logger.log(`Searching by text in ${collectionNames.length} collections: ${collectionNames.join(', ')} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${minRelevancia}`);
 
     const startTime = Date.now();
     const allResults: any[] = [];
@@ -987,7 +1093,7 @@ export class SearchService {
       const searchPromises = collectionNames.map(async (collectionName) => {
         try {
           this.logger.debug(`Searching in collection: ${collectionName}`);
-          const result = await this.searchByText(query, collectionName, limit, marca, cliente, useLLMFilter, payloadFilters);
+          const result = await this.searchByText(query, collectionName, limit, marca, cliente, useLLMFilter, payloadFilters, minRelevancia);
 
           // Add collection name to each result
           const resultsWithCollection = result.results.map((r: any) => ({
@@ -1023,8 +1129,15 @@ export class SearchService {
       // Sort all results by score (descending)
       allResults.sort((a, b) => b.score - a.score);
 
+      // Filter by minRelevancia threshold (RTI score)
+      const relevantResults = allResults.filter(r => r.score >= minRelevancia);
+      const filteredCount = allResults.length - relevantResults.length;
+      if (filteredCount > 0) {
+        this.logger.log(`Filtered out ${filteredCount} results below minRelevancia threshold (${minRelevancia})`);
+      }
+
       // Trim to requested limit
-      const finalResults = allResults.slice(0, limit);
+      const finalResults = relevantResults.slice(0, limit);
 
       // Execute internet search if requested
       let internetResults = null;
@@ -1065,8 +1178,10 @@ export class SearchService {
         marca,
         cliente,
         collections: collectionNames,
+        minRelevancia,
         duration: `${duration}ms`,
         total_results: allResults.length,
+        filtered_by_relevancia: filteredCount,
         collection_stats: collectionStats,
         results: finalResults,
         ...(internetResults && { internet_results: internetResults }),

@@ -410,13 +410,170 @@ Responde SOLO con un objeto JSON válido (sin markdown, sin comentarios):
   }
 
   /**
+   * Compare two product descriptions using embeddings and optionally LLM
+   * Returns similarity score and classification based on RTI scale
+   */
+  async compareProductDescriptions(
+    descripcion1: string,
+    descripcion2: string,
+    marca1?: string,
+    marca2?: string,
+    useLLMFilter: boolean = false,
+  ): Promise<{
+    similarity: number;
+    metodo: 'embedding' | 'embedding+llm';
+    clasificacion?: string;
+    razon?: string;
+    detalles?: {
+      tipo_producto: { match: boolean; nota: string };
+      especificaciones: { match: boolean; nota: string };
+      marca: { match: boolean; nota: string };
+      intercambiable: boolean;
+    };
+    embedding_similarity: number;
+    duracion_ms: number;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // Build full text for embedding including brand if available
+      const text1 = marca1 ? `${descripcion1} ${marca1}` : descripcion1;
+      const text2 = marca2 ? `${descripcion2} ${marca2}` : descripcion2;
+
+      // Generate embeddings for both products
+      const [embedding1, embedding2] = await Promise.all([
+        this.generateEmbedding(text1),
+        this.generateEmbedding(text2),
+      ]);
+
+      // Calculate cosine similarity
+      const similarity = this.cosineSimilarity(embedding1, embedding2);
+      const duracion_ms = Date.now() - startTime;
+
+      // If only using embeddings, return basic result
+      if (!useLLMFilter) {
+        return {
+          similarity,
+          metodo: 'embedding',
+          embedding_similarity: similarity,
+          duracion_ms,
+        };
+      }
+
+      // Use LLM for detailed comparison
+      const model = this.genAI.getGenerativeModel({ model: this.visionModel });
+
+      const prompt = `Eres un experto en productos industriales de ferretería.
+
+TAREA: Comparar dos productos y determinar su nivel de similitud/intercambiabilidad.
+
+PRODUCTO 1:
+Descripción: ${descripcion1}
+Marca: ${marca1 || 'No especificada'}
+
+PRODUCTO 2:
+Descripción: ${descripcion2}
+Marca: ${marca2 || 'No especificada'}
+
+SIMILITUD SEMÁNTICA (embeddings): ${(similarity * 100).toFixed(1)}%
+
+CRITERIOS DE COMPARACIÓN:
+1. TIPO DE PRODUCTO - ¿Son el mismo tipo? (ej: ambos son llaves mixtas)
+2. ESPECIFICACIONES - ¿Coinciden medidas, dimensiones, capacidades?
+3. MARCA - ¿Son la misma marca o marcas diferentes?
+4. MATERIAL/CALIDAD - ¿Son de calidad comparable?
+5. USO PREVISTO - ¿Sirven para el mismo propósito?
+
+ESCALA RTI (Relevancia Técnica Industrial):
+- 1.00: EXACTO - Mismo producto exacto (incluyendo marca)
+- 0.95: EQUIVALENTE - Mismo producto, nomenclatura diferente (6"=152mm, MIXTA=COMBINADA)
+- 0.85: SUSTITUTO_PERFECTO - Intercambiables sin diferencia funcional (misma spec, marca diff)
+- 0.70: SUSTITUTO_VALIDO - Intercambiables con pequeñas diferencias
+- 0.50: MISMA_CATEGORIA - Mismo tipo, specs diferentes
+- 0.30: RELACIONADO - Complementarios o accesorios
+- 0.10: IRRELEVANTE - Sin relación funcional directa
+
+Responde SOLO con JSON válido (sin markdown):
+{
+  "similarity": 0.85,
+  "clasificacion": "SUSTITUTO_PERFECTO",
+  "razon": "Explicación detallada de máximo 50 palabras",
+  "detalles": {
+    "tipo_producto": { "match": true, "nota": "Ambos son llaves mixtas" },
+    "especificaciones": { "match": true, "nota": "18mm exacto" },
+    "marca": { "match": false, "nota": "Stanley vs Truper" },
+    "intercambiable": true
+  }
+}`;
+
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const text = response.text().trim();
+
+      // Remove markdown code blocks if present
+      const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const llmResult = JSON.parse(jsonText);
+
+      const finalDuration = Date.now() - startTime;
+
+      return {
+        similarity: llmResult.similarity || similarity,
+        metodo: 'embedding+llm',
+        clasificacion: llmResult.clasificacion,
+        razon: llmResult.razon,
+        detalles: llmResult.detalles,
+        embedding_similarity: similarity,
+        duracion_ms: finalDuration,
+      };
+    } catch (error) {
+      const duracion_ms = Date.now() - startTime;
+      this.logger.error(`Failed to compare products: ${error.message}`);
+
+      // Return embedding-only result on LLM failure
+      return {
+        similarity: 0,
+        metodo: 'embedding',
+        razon: `Error en comparación: ${error.message}`,
+        embedding_similarity: 0,
+        duracion_ms,
+      };
+    }
+  }
+
+  /**
+   * Calculate cosine similarity between two vectors
+   */
+  private cosineSimilarity(vec1: number[], vec2: number[]): number {
+    if (vec1.length !== vec2.length) {
+      throw new Error('Vectors must have the same length');
+    }
+
+    let dotProduct = 0;
+    let norm1 = 0;
+    let norm2 = 0;
+
+    for (let i = 0; i < vec1.length; i++) {
+      dotProduct += vec1[i] * vec2[i];
+      norm1 += vec1[i] * vec1[i];
+      norm2 += vec2[i] * vec2[i];
+    }
+
+    const denominator = Math.sqrt(norm1) * Math.sqrt(norm2);
+    if (denominator === 0) {
+      return 0;
+    }
+
+    return dotProduct / denominator;
+  }
+
+  /**
    * Filter search results semantically using LLM to ensure relevance
    * Evaluates each product to determine if it matches the user's search intent
    */
   async filterSearchResults(
     query: string,
-    products: Array<{ id: string; descripcion: string; marca?: string; categoria?: string; score: number }>,
-  ): Promise<Array<{ id: string; match: boolean; confidence: number; reason: string; adjustedScore: number }>> {
+    products: Array<{ id: string; descripcion: string; marca?: string; categoria?: string; codigo?: string; score: number }>,
+  ): Promise<Array<{ id: string; match: boolean; confidence: number; score_rti: number; categoria_rti: string; reason: string; adjustedScore: number }>> {
     try {
       if (products.length === 0) {
         return [];
@@ -438,61 +595,46 @@ Descripción: ${p.descripcion}${p.marca ? `\nMarca: ${p.marca}` : ''}${p.categor
 Score original: ${p.score.toFixed(3)}`
         ).join('\n\n');
 
-        const prompt = `Eres un inspector de control de calidad INDUSTRIAL ESTRICTO. Valida si cada producto es EXACTAMENTE lo que el cliente solicita o un equivalente industrial certificado.
-
-BÚSQUEDA DEL CLIENTE: "${query}"
+        const prompt = `Eres un experto en RELEVANCIA TÉCNICA INDUSTRIAL (RTI). Evalúa cada producto según qué tan útil sería para un cliente que busca: "${query}"
 
 PRODUCTOS A EVALUAR:
 ${productsText}
 
-REGLAS DE VALIDACIÓN INDUSTRIAL (INFLEXIBLES):
+ESCALA RTI (Relevancia Técnica Industrial) - 8 NIVELES:
 
-1. TIPO DE PRODUCTO:
-   - DEBE ser el producto EXACTO solicitado
-   - NO aceptar accesorios, complementos o productos relacionados
-   - Ejemplo: Si pide "desarmador" NO aceptar "kit de desarmadores", "juego", "set"
+| Score | Categoría         | Descripción                                      | Ejemplo                                           |
+|-------|-------------------|--------------------------------------------------|---------------------------------------------------|
+| 1.00  | EXACTO            | Producto idéntico (mismo SKU/modelo)             | Query "LLAVE MIXTA 13MM STANLEY" → "LLAVE MIXTA 13MM STANLEY 86-858" |
+| 0.95  | EQUIVALENTE       | Mismas specs, nomenclatura diferente             | Query "LLAVE MIXTA 13MM" → "LLAVE COMBINADA 13 MILIMETROS" |
+| 0.85  | SUSTITUTO_PERFECTO| Misma función/specs, diferente marca             | Query "LLAVE MIXTA 13MM STANLEY" → "LLAVE MIXTA 13MM TRUPER" |
+| 0.70  | SUSTITUTO_VALIDO  | Misma función, specs compatibles/cercanas        | Query "LLAVE MIXTA 13MM" → "LLAVE MIXTA 12MM" |
+| 0.50  | MISMA_CATEGORIA   | Mismo tipo producto, specs diferentes            | Query "LLAVE MIXTA 13MM" → "LLAVE MIXTA 24MM" |
+| 0.30  | RELACIONADO       | Complementario o accesorio                       | Query "LLAVE MIXTA 13MM" → "ORGANIZADOR DE LLAVES" |
+| 0.10  | IRRELEVANTE       | Sin relación funcional                           | Query "LLAVE MIXTA 13MM" → "PINTURA LATEX BLANCO" |
+| 0.00  | RECHAZADO         | Producto completamente diferente                 | Query "LLAVE MIXTA 13MM" → "PAPEL HIGIÉNICO" |
 
-2. ESPECIFICACIONES TÉCNICAS (CERO TOLERANCIA):
-   - Medidas/Dimensiones: DEBEN ser EXACTAS (6" ≠ 8" ≠ 10")
-   - Voltaje: DEBE ser EXACTO (110V ≠ 220V)
-   - Capacidad: DEBE ser EXACTA (500ml ≠ 1L)
-   - Peso/Masa: DEBE ser EXACTO (1kg ≠ 2kg)
-   - Diámetro/Grosor: DEBE ser EXACTO (1/4" ≠ 3/8" ≠ 1/2")
+REGLAS DE EVALUACIÓN:
 
-   EQUIVALENCIAS INDUSTRIALES ACEPTABLES:
-   - Solo si son estándares certificados (ej: "Phillips #2" = "Estrella #2")
-   - Conversiones métricas exactas (ej: 6" = 152mm, 1/4" = 6.35mm)
-   - Nomenclatura industrial equivalente (ej: "Plano" = "Punta plana")
+1. TIPO DE PRODUCTO: Productos del mismo tipo base suben a >=0.50
+2. ESPECIFICACIONES: Mismas specs sube a >=0.85, specs cercanas 0.70, diferentes 0.50
+3. MARCA: Si se especificó marca y no coincide, máximo 0.85 (SUSTITUTO_PERFECTO)
+4. NOMENCLATURA: "MIXTA"="COMBINADA", "MM"="MILIMETROS", 13MM=13 MILIMETROS => EQUIVALENTE (0.95)
 
-3. MARCA (SI SE ESPECIFICÓ):
-   - DEBE ser la marca EXACTA solicitada
-   - NO aceptar marcas "similares" o "equivalentes"
-   - Stanley ≠ Truper ≠ Urrea ≠ Klein Tools
-
-4. CRITERIO DE RECHAZO AUTOMÁTICO:
-   - Producto de tipo diferente => match=false
-   - Cualquier especificación diferente => match=false
-   - Marca diferente (si se especificó) => match=false
-   - Juegos/Sets/Kits (si se pidió pieza individual) => match=false
-   - Producto complementario o accesorio => match=false
-
-EJEMPLOS DE EVALUACIÓN ESTRICTA:
-  ✅ Query "desarmador plano 1/4 x 6 pulgadas stanley" + Producto "DESARMADOR PLANO 1/4\" X 6\" STANLEY 64-461" => match=true, confidence=1.0 (EXACTO)
-  ✅ Query "desarmador plano 1/4 x 6" + Producto "DESARMADOR PUNTA PLANA 1/4\" X 152MM" => match=true, confidence=0.95 (6"=152mm, equivalente industrial)
-
-  ❌ Query "desarmador plano 1/4 x 6" + Producto "DESARMADOR PLANO 1/4\" X 8\"" => match=false, confidence=0.0 (medida diferente: 8" ≠ 6")
-  ❌ Query "desarmador plano 1/4 x 6 stanley" + Producto "DESARMADOR PLANO 1/4\" X 6\" TRUPER" => match=false, confidence=0.0 (marca diferente)
-  ❌ Query "desarmador plano 1/4 x 6" + Producto "JGO DESARMADORES 6 PZAS" => match=false, confidence=0.0 (es juego, no pieza individual)
-  ❌ Query "cable 10mm" + Producto "CABLE 12MM" => match=false, confidence=0.0 (calibre diferente)
-  ❌ Query "papel A4 80g" + Producto "PAPEL A4 75G" => match=false, confidence=0.0 (gramaje diferente)
+EJEMPLOS PRÁCTICOS:
+- Query "LLAVE MIXTA 13MM STANLEY" + "LLAVE MIXTA 13MM STANLEY 86-858" => score=1.00, categoria="EXACTO"
+- Query "LLAVE MIXTA 13MM" + "LLAVE COMBINADA 13 MILIMETROS TRUPER" => score=0.95, categoria="EQUIVALENTE"
+- Query "LLAVE MIXTA 13MM STANLEY" + "LLAVE MIXTA 13MM TRUPER" => score=0.85, categoria="SUSTITUTO_PERFECTO"
+- Query "LLAVE MIXTA 13MM" + "LLAVE MIXTA 14MM" => score=0.70, categoria="SUSTITUTO_VALIDO"
+- Query "LLAVE MIXTA 13MM" + "LLAVE MIXTA 24MM" => score=0.50, categoria="MISMA_CATEGORIA"
+- Query "LLAVE MIXTA 13MM" + "DESARMADOR PLANO" => score=0.10, categoria="IRRELEVANTE"
 
 Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
 [
   {
     "id": "id del producto",
-    "match": true o false,
-    "confidence": número entre 0.0 y 1.0,
-    "reason": "breve explicación (máx 20 palabras)"
+    "score_rti": número (0.00, 0.10, 0.30, 0.50, 0.70, 0.85, 0.95, o 1.00),
+    "categoria": "EXACTO|EQUIVALENTE|SUSTITUTO_PERFECTO|SUSTITUTO_VALIDO|MISMA_CATEGORIA|RELACIONADO|IRRELEVANTE|RECHAZADO",
+    "reason": "breve explicación (máx 15 palabras)"
   }
 ]`;
 
@@ -508,22 +650,26 @@ Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
         // Validate and merge results
         if (Array.isArray(batchResults)) {
           batchResults.forEach((item) => {
-            if (item.id && typeof item.match === 'boolean') {
+            if (item.id && (typeof item.score_rti === 'number' || typeof item.match === 'boolean')) {
               // Find original product to get score
               const originalProduct = batch.find(p => p.id === item.id);
               const originalScore = originalProduct?.score || 0;
 
-              // Adjust score based on LLM confidence
-              // If match=true, boost score by confidence
-              // If match=false, severely penalize
-              const adjustedScore = item.match
-                ? originalScore * (0.5 + item.confidence * 0.5) // Boost matched products
-                : originalScore * 0.1; // Penalize non-matches heavily
+              // New RTI-based scoring
+              const scoreRti = item.score_rti ?? (item.match ? 0.85 : 0.10); // Fallback for old format
+              const categoria = item.categoria || (item.match ? 'SUSTITUTO_PERFECTO' : 'IRRELEVANTE');
+
+              // Use RTI score directly - it already represents the relevance
+              // Blend original vectorial score with RTI for final adjusted score
+              // RTI score has more weight (70%) than vectorial (30%)
+              const adjustedScore = (scoreRti * 0.70) + (originalScore * 0.30);
 
               results.push({
                 id: item.id,
-                match: item.match,
-                confidence: item.confidence || 0.5,
+                match: scoreRti >= 0.50, // MISMA_CATEGORIA or better = match
+                confidence: scoreRti,
+                score_rti: scoreRti,
+                categoria_rti: categoria,
                 reason: item.reason || 'Sin razón',
                 adjustedScore,
               });
@@ -545,8 +691,10 @@ Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
       return products.map(p => ({
         id: p.id,
         match: true, // Default to true on error to avoid hiding results
-        confidence: 0.3,
-        reason: `Error en filtrado: ${error.message}`,
+        confidence: 0.50,
+        score_rti: 0.50, // MISMA_CATEGORIA - assume relevance on error
+        categoria_rti: 'MISMA_CATEGORIA',
+        reason: `Error en filtrado RTI: ${error.message}`,
         adjustedScore: p.score * 0.5,
       }));
     }

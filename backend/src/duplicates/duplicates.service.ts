@@ -816,4 +816,51 @@ export class DuplicatesService {
       throw new Error(`Failed to validate product: ${error.message}`);
     }
   }
+
+  /**
+   * Compare two products directly using embeddings and optional LLM
+   * Returns similarity score and classification based on RTI scale
+   */
+  async compareProducts(
+    descripcion1: string,
+    descripcion2: string,
+    marca1?: string,
+    marca2?: string,
+    useLLMFilter: boolean = false,
+  ): Promise<{
+    similarity: number;
+    metodo: 'embedding' | 'embedding+llm';
+    clasificacion?: string;
+    razon?: string;
+    detalles?: {
+      tipo_producto: { match: boolean; nota: string };
+      especificaciones: { match: boolean; nota: string };
+      marca: { match: boolean; nota: string };
+      intercambiable: boolean;
+    };
+    embedding_similarity: number;
+    duracion_ms: number;
+    productos: {
+      producto1: { descripcion: string; marca: string | null };
+      producto2: { descripcion: string; marca: string | null };
+    };
+  }> {
+    this.logger.log(`Comparing products: "${descripcion1.substring(0, 50)}..." vs "${descripcion2.substring(0, 50)}..."`);
+
+    const result = await this.geminiService.compareProductDescriptions(
+      descripcion1,
+      descripcion2,
+      marca1,
+      marca2,
+      useLLMFilter,
+    );
+
+    return {
+      ...result,
+      productos: {
+        producto1: { descripcion: descripcion1, marca: marca1 || null },
+        producto2: { descripcion: descripcion2, marca: marca2 || null },
+      },
+    };
+  }
 }
