@@ -76,7 +76,7 @@ export const syncApi = {
  * - useLLMFilter: false (trust embeddings by default)
  * - minRelevancia: Dynamic based on useLLMFilter
  *   - With LLM (useLLMFilter=true): 0.65 (LLM filters noise)
- *   - Without LLM (useLLMFilter=false): 0.68 (higher threshold compensates)
+ *   - Without LLM (useLLMFilter=false): 0.70 (higher threshold filters irrelevant results)
  */
 export const searchApi = {
   searchByText: (params: {
@@ -87,15 +87,25 @@ export const searchApi = {
     cliente?: string;
     includeInternetSearch?: boolean;
     useLLMFilter?: boolean; // Default: false (backend) - trust embeddings
-    minRelevancia?: number; // Default: 0.68 sin LLM, 0.65 con LLM (backend)
+    minRelevancia?: number; // Default: 0.70 sin LLM, 0.65 con LLM (backend)
     payloadFilters?: Record<string, any>;
   }) =>
     api.post('/search/text', params),
 
-  searchByImage: (file: File, collection: string, limit: number = 3) => {
+  searchByImage: (
+    file: File,
+    collection: string,
+    limit: number = 3,
+    useLLMFilter: boolean = false,
+    minRelevancia?: number,
+  ) => {
     const formData = new FormData();
     formData.append('image', file);
-    return api.post(`/search/image?collection=${collection}&limit=${limit}`, formData, {
+    let url = `/search/image?collection=${collection}&limit=${limit}&useLLMFilter=${useLLMFilter}`;
+    if (minRelevancia !== undefined) {
+      url += `&minRelevancia=${minRelevancia}`;
+    }
+    return api.post(url, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

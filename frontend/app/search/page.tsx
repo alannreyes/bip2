@@ -11,7 +11,14 @@ import { searchApi } from '@/lib/api';
 interface SearchResult {
   id: string | number;
   score: number;
+  score_vectorial?: number;
   payload: Record<string, any>;
+  rti?: {
+    score_rti: number;
+    categoria_rti: string;
+    evaluado_por: string;
+    razon: string;
+  };
 }
 
 export default function ImageSearchPage() {
@@ -23,6 +30,8 @@ export default function ImageSearchPage() {
   const [extractedText, setExtractedText] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [limit, setLimit] = useState(3); // Aligned with backend default
+  const [useLLMFilter, setUseLLMFilter] = useState<boolean>(false); // Backend default: false
+  const [minRelevancia, setMinRelevancia] = useState<number | undefined>(undefined); // Auto: 0.65 con LLM, 0.70 sin LLM
 
   // JSON display states for developer demo
   const [requestJson, setRequestJson] = useState<string>('');
@@ -91,10 +100,12 @@ export default function ImageSearchPage() {
       queryParams: {
         collection: selectedCollection,
         limit: limit,
+        useLLMFilter: useLLMFilter,
+        minRelevancia: minRelevancia ?? (useLLMFilter ? 0.65 : 0.70),
       },
       body: {
         image: `<File: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB, ${selectedFile.type})>`
-      }
+      },
     };
     setRequestJson(JSON.stringify(requestInfo, null, 2));
     setResponseJson('');
@@ -102,7 +113,13 @@ export default function ImageSearchPage() {
     const startTime = Date.now();
 
     try {
-      const response = await searchApi.searchByImage(selectedFile, selectedCollection, limit);
+      const response = await searchApi.searchByImage(
+        selectedFile,
+        selectedCollection,
+        limit,
+        useLLMFilter,
+        minRelevancia,
+      );
       setResponseDuration(Date.now() - startTime);
       setExtractedText(response.data.extractedText);
       setSearchResults(response.data.results);
@@ -243,18 +260,66 @@ export default function ImageSearchPage() {
                   <CardTitle className="text-base">3. Configuración</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1">
+                        Resultados
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        className="w-full px-3 py-2 text-sm border rounded-md"
+                        value={limit}
+                        onChange={(e) => setLimit(parseInt(e.target.value))}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-4">
+                      <input
+                        type="checkbox"
+                        id="llm-filter-img"
+                        checked={useLLMFilter}
+                        onChange={(e) => setUseLLMFilter(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="llm-filter-img" className="text-xs">
+                        Filtro LLM (RTI)
+                      </label>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-medium mb-1">
-                      Número de resultados
+                      Relevancia mín: {minRelevancia !== undefined ? `${(minRelevancia * 100).toFixed(0)}%` : 'Auto (backend)'}
+                      {minRelevancia !== undefined && (
+                        <button
+                          type="button"
+                          onClick={() => setMinRelevancia(undefined)}
+                          className="ml-2 text-blue-600 hover:underline"
+                        >
+                          Reset
+                        </button>
+                      )}
                     </label>
                     <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      className="w-full px-3 py-2 text-sm border rounded-md"
-                      value={limit}
-                      onChange={(e) => setLimit(parseInt(e.target.value))}
+                      type="range"
+                      min="0.50"
+                      max="0.95"
+                      step="0.05"
+                      value={minRelevancia ?? (useLLMFilter ? 0.65 : 0.70)}
+                      onChange={(e) => setMinRelevancia(parseFloat(e.target.value))}
+                      className="w-full h-2"
                     />
+                    <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                      <span>50%</span>
+                      <span>95%</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {minRelevancia === undefined
+                        ? `Auto: ${useLLMFilter ? '65%' : '70%'} (${useLLMFilter ? 'con' : 'sin'} LLM)`
+                        : ''
+                      }
+                    </p>
                   </div>
 
                   <Button
@@ -307,20 +372,41 @@ export default function ImageSearchPage() {
                           className="p-3 border rounded-lg hover:shadow-sm transition-shadow"
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <div className="text-sm font-medium">#{index + 1}</div>
-                            <div className="text-xs">
-                              <span className="text-muted-foreground">Score: </span>
-                              <span className="font-mono font-medium text-green-600">
-                                {(result.score * 100).toFixed(1)}%
-                              </span>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium">#{index + 1}</div>
+                              {result.rti && (
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${
+                                  result.rti.categoria_rti === 'EXACTO' ? 'bg-green-100 text-green-800' :
+                                  result.rti.categoria_rti === 'EQUIVALENTE' ? 'bg-emerald-100 text-emerald-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {result.rti.categoria_rti}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-right">
+                              {result.rti ? (
+                                <div>
+                                  <span className="font-bold text-green-600">{(result.rti.score_rti * 100).toFixed(0)}%</span>
+                                  <div className="text-gray-400">Vec: {((result.score_vectorial || result.score) * 100).toFixed(0)}%</div>
+                                </div>
+                              ) : (
+                                <span className="font-mono font-medium text-green-600">{(result.score * 100).toFixed(1)}%</span>
+                              )}
                             </div>
                           </div>
+
+                          {result.rti?.razon && (
+                            <div className="mb-2 p-1.5 bg-blue-50 rounded text-xs text-blue-800">
+                              {result.rti.razon}
+                            </div>
+                          )}
 
                           {/* Primary fields */}
                           <div className="space-y-1 text-xs">
                             {result.payload.Articulo_Codigo && (
                               <div className="flex items-center gap-2">
-                                <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">
+                                <span className="font-mono bg-gray-800 text-white px-2 py-1 rounded text-sm font-bold">
                                   {result.payload.Articulo_Codigo}
                                 </span>
                               </div>
@@ -333,9 +419,13 @@ export default function ImageSearchPage() {
 
                             {/* Secondary info row */}
                             <div className="flex flex-wrap gap-2 mt-2">
-                              {result.payload.Articulo_Lista_Costo && (
-                                <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded border border-green-200">
-                                  ${Number(result.payload.Articulo_Lista_Costo).toFixed(2)}
+                              {result.payload.Articulo_Lista_Costo !== undefined && (
+                                <span className={`px-2 py-0.5 rounded border ${
+                                  result.payload.Articulo_Lista_Costo
+                                    ? 'bg-green-50 text-green-700 border-green-200'
+                                    : 'bg-gray-50 text-gray-500 border-gray-200'
+                                }`}>
+                                  {result.payload.Articulo_Lista_Costo ? 'En Lista Costo' : 'No en Lista'}
                                 </span>
                               )}
                               {result.payload.Articulo_De_Stock !== undefined && (

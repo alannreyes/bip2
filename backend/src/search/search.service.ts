@@ -76,12 +76,12 @@ export class SearchService {
     // Dynamic threshold logic:
     // - If user specifies minRelevancia explicitly, use that value
     // - If useLLMFilter=true: use 0.65 (LLM filters noise, lower threshold OK)
-    // - If useLLMFilter=false: use 0.68 (higher threshold compensates for no LLM)
+    // - If useLLMFilter=false: use 0.70 (higher threshold compensates for no LLM filtering)
     const effectiveMinRelevancia = minRelevancia !== undefined
       ? minRelevancia
       : useLLMFilter
         ? 0.65  // With LLM: lower threshold, LLM will filter noise
-        : 0.68; // Without LLM: higher threshold to reduce noise
+        : 0.70; // Without LLM: higher threshold to reduce noise (filters irrelevant results like 68%)
 
     this.logger.log(`Searching by text in collection: ${collectionName}`);
     this.logger.debug(`Query: ${query}${marca ? `, Marca: ${marca}` : ''}${cliente ? `, Cliente: ${cliente}` : ''}${payloadFilters ? `, Payload Filters: ${JSON.stringify(payloadFilters)}` : ''} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${effectiveMinRelevancia}${minRelevancia === undefined ? ' (auto)' : ''}`);
@@ -947,8 +947,17 @@ export class SearchService {
     mimeType: string,
     collectionName: string,
     limit: number = 10,
+    useLLMFilter: boolean = false,
+    minRelevancia?: number,
   ): Promise<any> {
-    this.logger.log(`Searching by image in collection: ${collectionName}`);
+    // Dynamic minRelevancia based on LLM filter (same as text search)
+    const effectiveMinRelevancia = minRelevancia !== undefined
+      ? minRelevancia
+      : useLLMFilter
+        ? 0.65  // With LLM: lower threshold
+        : 0.70; // Without LLM: higher threshold
+
+    this.logger.log(`Searching by image in collection: ${collectionName} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${effectiveMinRelevancia}`);
 
     const startTime = Date.now();
 
@@ -959,16 +968,87 @@ export class SearchService {
       this.logger.debug(`Extracted text: ${extractedText.substring(0, 100)}...`);
 
       // Step 2: Generate embedding directly from extracted text
-      // NO BOOST - trust Qdrant's vectorial similarity
       this.logger.debug('Generating embedding from extracted text...');
       const embedding = await this.geminiService.generateEmbedding(extractedText);
 
-      // Step 3: Search in Qdrant (no filters for image search)
-      this.logger.debug(`Searching in Qdrant collection: ${collectionName} (limit: ${limit})`);
-      const searchResults = await this.qdrantService.search(collectionName, embedding, limit, null);
+      // Step 3: Search in Qdrant - fetch more candidates if using LLM filter
+      const fetchLimit = useLLMFilter ? limit * 2 : limit;
+      this.logger.debug(`Searching in Qdrant collection: ${collectionName} (limit: ${fetchLimit})`);
+      const searchResults = await this.qdrantService.search(collectionName, embedding, fetchLimit, null);
 
-      // Step 4: Return results with pure vectorial scores (NO BOOST)
-      const finalResults = searchResults.slice(0, limit);
+      // Step 4: Apply LLM filter or vectorial filter
+      let finalResults: any[];
+
+      if (useLLMFilter && searchResults.length > 0) {
+        // LLM Filter: Evaluate candidates with RTI
+        this.logger.log(`LLM Filter ENABLED - Evaluating ${searchResults.length} candidates with RTI...`);
+
+        const candidates = searchResults.map((result) => ({
+          id: result.id,
+          score_vectorial: result.score,
+          payload: result.payload,
+          descripcion: result.payload?.descripcion || result.payload?.Articulo_Descripcion || '',
+        }));
+
+        // Evaluate with RTI using filterSearchResults
+        const rtiResults = await this.geminiService.filterSearchResults(
+          extractedText,
+          candidates.map((c) => ({
+            id: String(c.id),
+            descripcion: c.descripcion,
+            score: c.score_vectorial,
+          })),
+        );
+
+        // Merge RTI results with candidates
+        finalResults = candidates.map((candidate) => {
+          const rti = rtiResults.find((r) => r.id === String(candidate.id));
+          return {
+            id: candidate.id,
+            score: rti?.score_rti || candidate.score_vectorial,
+            score_vectorial: candidate.score_vectorial,
+            payload: candidate.payload,
+            rti: rti ? {
+              score_rti: rti.score_rti,
+              categoria_rti: rti.categoria_rti,
+              evaluado_por: 'gemini-rti',
+              razon: rti.reason,
+            } : undefined,
+          };
+        });
+
+        // Filter by minRelevancia and sort by RTI score
+        finalResults = finalResults
+          .filter((r) => r.score >= effectiveMinRelevancia)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limit);
+
+        this.logger.log(`After RTI filter (≥${effectiveMinRelevancia}): ${finalResults.length} results`);
+      } else {
+        // No LLM: use vectorial scores with minRelevancia filter
+        this.logger.log(`LLM Filter DISABLED - using vectorial scores`);
+
+        finalResults = searchResults
+          .filter((r) => r.score >= effectiveMinRelevancia)
+          .slice(0, limit)
+          .map((result) => {
+            const inferred = inferRtiFromScore(result.score);
+            return {
+              id: result.id,
+              score: result.score,
+              score_vectorial: result.score,
+              payload: result.payload,
+              rti: {
+                score_rti: inferred.score_rti,
+                categoria_rti: inferred.categoria,
+                evaluado_por: 'vectorial-inference',
+                razon: 'Inferido desde score de similitud vectorial',
+              },
+            };
+          });
+
+        this.logger.log(`After vectorial filter (≥${effectiveMinRelevancia}): ${finalResults.length} results`);
+      }
 
       const endTime = Date.now();
       const duration = endTime - startTime;
@@ -978,12 +1058,9 @@ export class SearchService {
       return {
         extractedText,
         duration: `${duration}ms`,
-        results: finalResults.map((result) => ({
-          id: result.id,
-          score: result.score,
-          score_vectorial: result.score,
-          payload: result.payload,
-        })),
+        useLLMFilter,
+        minRelevancia: effectiveMinRelevancia,
+        results: finalResults,
       };
     } catch (error) {
       this.logger.error(`Image search failed: ${error.message}`, error.stack);
@@ -1095,12 +1172,12 @@ export class SearchService {
     // Dynamic threshold logic:
     // - If user specifies minRelevancia explicitly, use that value
     // - If useLLMFilter=true: use 0.65 (LLM filters noise, lower threshold OK)
-    // - If useLLMFilter=false: use 0.68 (higher threshold compensates for no LLM)
+    // - If useLLMFilter=false: use 0.70 (higher threshold compensates for no LLM filtering)
     const effectiveMinRelevancia = minRelevancia !== undefined
       ? minRelevancia
       : useLLMFilter
         ? 0.65  // With LLM: lower threshold, LLM will filter noise
-        : 0.68; // Without LLM: higher threshold to reduce noise
+        : 0.70; // Without LLM: higher threshold to reduce noise (filters irrelevant results like 68%)
 
     this.logger.log(`Searching by text in ${collectionNames.length} collections: ${collectionNames.join(', ')} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${effectiveMinRelevancia}${minRelevancia === undefined ? ' (auto)' : ''}`);
 

@@ -80,6 +80,8 @@ export class SearchController {
     @UploadedFile() file: Express.Multer.File,
     @Query('collection') collection: string,
     @Query('limit') limit?: string,
+    @Query('useLLMFilter') useLLMFilter?: string,
+    @Query('minRelevancia') minRelevancia?: string,
   ) {
     if (!file) {
       throw new BadRequestException('No image or PDF file provided');
@@ -102,12 +104,16 @@ export class SearchController {
     }
 
     const limitNum = limit ? parseInt(limit, 10) : 3; // Default 3 for precision-focused results
+    const useLLM = useLLMFilter === 'true';
+    const minRel = minRelevancia ? parseFloat(minRelevancia) : undefined;
 
     return await this.searchService.searchByImage(
       file.buffer,
       file.mimetype,
       collection,
       limitNum,
+      useLLM,
+      minRel,
     );
   }
 

@@ -42,7 +42,7 @@ export default function TextSearchPage() {
   const [cliente, setCliente] = useState<string>('');
   const [includeInternetSearch, setIncludeInternetSearch] = useState<boolean>(false); // Backend default: false
   const [useLLMFilter, setUseLLMFilter] = useState<boolean>(false); // Backend default: false - trust embeddings
-  const [minRelevancia, setMinRelevancia] = useState<number | undefined>(undefined); // Backend default: dynamic (0.65 con LLM, 0.68 sin LLM)
+  const [minRelevancia, setMinRelevancia] = useState<number | undefined>(undefined); // Backend default: dynamic (0.65 con LLM, 0.70 sin LLM)
   const [internetResults, setInternetResults] = useState<any>(null);
   const [quickProductInfo, setQuickProductInfo] = useState<any>(null); // Quick identification (shows first)
   const [clientFilterMessage, setClientFilterMessage] = useState<string>(''); // Client filter UX message
@@ -452,16 +452,20 @@ export default function TextSearchPage() {
                         </label>
                         <input
                           type="range"
-                          min="0"
-                          max="1"
+                          min="0.50"
+                          max="0.95"
                           step="0.05"
-                          value={minRelevancia ?? 0.68}
+                          value={minRelevancia ?? (useLLMFilter ? 0.65 : 0.70)}
                           onChange={(e) => setMinRelevancia(parseFloat(e.target.value))}
                           className="w-full h-2"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                          <span>50%</span>
+                          <span>95%</span>
+                        </div>
+                        <p className="text-xs text-gray-500">
                           {minRelevancia === undefined
-                            ? 'Backend usa 0.68 sin LLM, 0.65 con LLM'
+                            ? `Auto: ${useLLMFilter ? '65%' : '70%'} (${useLLMFilter ? 'con' : 'sin'} LLM)`
                             : ''
                           }
                         </p>
@@ -560,7 +564,7 @@ export default function TextSearchPage() {
                           <div className="space-y-1 text-xs">
                             {result.payload.Articulo_Codigo && (
                               <div className="flex items-center gap-2">
-                                <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">
+                                <span className="font-mono bg-gray-800 text-white px-2 py-1 rounded text-sm font-bold">
                                   {result.payload.Articulo_Codigo}
                                 </span>
                               </div>
@@ -573,9 +577,13 @@ export default function TextSearchPage() {
 
                             {/* Secondary info row */}
                             <div className="flex flex-wrap gap-2 mt-2">
-                              {result.payload.Articulo_Lista_Costo && (
-                                <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded border border-green-200">
-                                  ${Number(result.payload.Articulo_Lista_Costo).toFixed(2)}
+                              {result.payload.Articulo_Lista_Costo !== undefined && (
+                                <span className={`px-2 py-0.5 rounded border ${
+                                  result.payload.Articulo_Lista_Costo
+                                    ? 'bg-green-50 text-green-700 border-green-200'
+                                    : 'bg-gray-50 text-gray-500 border-gray-200'
+                                }`}>
+                                  {result.payload.Articulo_Lista_Costo ? 'En Lista Costo' : 'No en Lista'}
                                 </span>
                               )}
                               {result.payload.Articulo_De_Stock !== undefined && (
@@ -686,7 +694,7 @@ export default function TextSearchPage() {
     "limit": 3,
     "useLLMFilter": false
   }'
-# minRelevancia: auto (0.68 sin LLM, 0.65 con LLM)`}
+# minRelevancia: auto (0.70 sin LLM, 0.65 con LLM)`}
                   </pre>
                 </div>
               </div>
