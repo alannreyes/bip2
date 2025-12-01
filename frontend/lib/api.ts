@@ -68,21 +68,31 @@ export const syncApi = {
   retryErrors: (jobId: string) => api.post(`/sync/errors/${jobId}/retry`),
 };
 
-// Search API
+/**
+ * Search API
+ *
+ * Backend Defaults (alineados con frontend):
+ * - limit: 3 (precision-focused results)
+ * - useLLMFilter: false (trust embeddings by default)
+ * - minRelevancia: Dynamic based on useLLMFilter
+ *   - With LLM (useLLMFilter=true): 0.65 (LLM filters noise)
+ *   - Without LLM (useLLMFilter=false): 0.68 (higher threshold compensates)
+ */
 export const searchApi = {
   searchByText: (params: {
     query: string;
     collections: string[];
-    limit?: number;
+    limit?: number; // Default: 3 (backend)
     marca?: string;
     cliente?: string;
     includeInternetSearch?: boolean;
-    useLLMFilter?: boolean;
-    minRelevancia?: number; // RTI v2.0: Minimum relevance threshold (0.00-1.00)
-    payloadFilters?: Record<string, any>; // RTI v2.0: Payload filters
+    useLLMFilter?: boolean; // Default: false (backend) - trust embeddings
+    minRelevancia?: number; // Default: 0.68 sin LLM, 0.65 con LLM (backend)
+    payloadFilters?: Record<string, any>;
   }) =>
     api.post('/search/text', params),
-  searchByImage: (file: File, collection: string, limit: number = 10) => {
+
+  searchByImage: (file: File, collection: string, limit: number = 3) => {
     const formData = new FormData();
     formData.append('image', file);
     return api.post(`/search/image?collection=${collection}&limit=${limit}`, formData, {
@@ -91,6 +101,7 @@ export const searchApi = {
       },
     });
   },
+
   recommend: (collection: string, positiveIds: string[], negativeIds: string[] = [], limit: number = 10) =>
     api.post('/search/recommend', {
       collection,

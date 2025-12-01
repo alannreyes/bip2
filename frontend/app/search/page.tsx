@@ -23,7 +23,7 @@ export default function ImageSearchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [limit, setLimit] = useState(3);
+  const [limit, setLimit] = useState(3); // Aligned with backend default
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

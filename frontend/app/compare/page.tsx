@@ -32,7 +32,7 @@ export default function ComparePage() {
   const [recommendResults, setRecommendResults] = useState<SearchResult[]>([]);
   const [isRecommending, setIsRecommending] = useState(false);
 
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(3); // Aligned with backend default
 
   const handleInitialSearch = async () => {
     if (!searchQuery.trim()) {
