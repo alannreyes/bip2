@@ -158,6 +158,16 @@ export const duplicatesApi = {
       similarityThreshold,
     }),
 
+  /**
+   * Compare two product descriptions
+   * Returns similarity score and optional LLM analysis
+   */
+  compare: (params: {
+    descripcion1: string;
+    descripcion2: string;
+    useLLMFilter?: boolean; // Default: false
+  }) => api.post('/duplicates/compare', params),
+
   // Rules API
   getRules: (collection: string) => api.get(`/duplicates/rules/${collection}`),
   updateRules: (collection: string, rules: any) => api.put(`/duplicates/rules/${collection}`, rules),
