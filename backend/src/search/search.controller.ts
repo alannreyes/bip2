@@ -101,7 +101,7 @@ export class SearchController {
       throw new BadRequestException('File size exceeds 10MB limit');
     }
 
-    const limitNum = limit ? parseInt(limit, 10) : 10;
+    const limitNum = limit ? parseInt(limit, 10) : 3; // Default 3 for precision-focused results
 
     return await this.searchService.searchByImage(
       file.buffer,

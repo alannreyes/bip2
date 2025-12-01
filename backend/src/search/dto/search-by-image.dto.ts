@@ -8,7 +8,7 @@ export class SearchByImageDto {
   @IsOptional()
   @Min(1)
   @Max(100)
-  limit?: number = 10;
+  limit?: number = 3; // Default 3 for precision-focused results
 
   @IsNumber()
   @IsOptional()
