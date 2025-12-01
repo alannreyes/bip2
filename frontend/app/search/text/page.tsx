@@ -40,9 +40,9 @@ export default function TextSearchPage() {
   const [limit, setLimit] = useState(3); // RTI v2.0: Default 3 for precision-focused results
   const [marca, setMarca] = useState<string>('');
   const [cliente, setCliente] = useState<string>('');
-  const [includeInternetSearch, setIncludeInternetSearch] = useState<boolean>(true);
-  const [useLLMFilter, setUseLLMFilter] = useState<boolean>(false); // Default: OFF - trust embeddings
-  const [minRelevancia, setMinRelevancia] = useState<number>(0.50); // RTI v2.0: Minimum relevance threshold
+  const [includeInternetSearch, setIncludeInternetSearch] = useState<boolean>(false); // Backend default: false
+  const [useLLMFilter, setUseLLMFilter] = useState<boolean>(false); // Backend default: false - trust embeddings
+  const [minRelevancia, setMinRelevancia] = useState<number | undefined>(undefined); // Backend default: dynamic (0.65 con LLM, 0.68 sin LLM)
   const [internetResults, setInternetResults] = useState<any>(null);
   const [quickProductInfo, setQuickProductInfo] = useState<any>(null); // Quick identification (shows first)
   const [clientFilterMessage, setClientFilterMessage] = useState<string>(''); // Client filter UX message
@@ -227,8 +227,8 @@ export default function TextSearchPage() {
       collections: selectedCollections,
       limit,
       useLLMFilter,
-      minRelevancia,
     };
+    if (minRelevancia !== undefined) requestBody.minRelevancia = minRelevancia;
     if (marca) requestBody.marca = marca.trim();
     if (cliente) requestBody.cliente = cliente.trim();
 
@@ -244,7 +244,7 @@ export default function TextSearchPage() {
         ...(marca && { marca: marca.trim() }),
         ...(cliente && { cliente: cliente.trim() }),
         useLLMFilter,
-        minRelevancia,
+        ...(minRelevancia !== undefined && { minRelevancia }),
       });
 
       setSearchResults(response.data.results);
@@ -439,17 +439,32 @@ export default function TextSearchPage() {
 
                       <div>
                         <label className="block text-xs font-medium mb-1">
-                          Relevancia mín: {(minRelevancia * 100).toFixed(0)}%
+                          Relevancia mín: {minRelevancia !== undefined ? `${(minRelevancia * 100).toFixed(0)}%` : 'Auto (backend)'}
+                          {minRelevancia !== undefined && (
+                            <button
+                              type="button"
+                              onClick={() => setMinRelevancia(undefined)}
+                              className="ml-2 text-blue-600 hover:underline"
+                            >
+                              Reset
+                            </button>
+                          )}
                         </label>
                         <input
                           type="range"
                           min="0"
                           max="1"
                           step="0.05"
-                          value={minRelevancia}
+                          value={minRelevancia ?? 0.68}
                           onChange={(e) => setMinRelevancia(parseFloat(e.target.value))}
                           className="w-full h-2"
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {minRelevancia === undefined
+                            ? 'Backend usa 0.68 sin LLM, 0.65 con LLM'
+                            : ''
+                          }
+                        </p>
                       </div>
                     </div>
 
@@ -635,9 +650,9 @@ export default function TextSearchPage() {
     "query": "LLAVE MIXTA 13MM",
     "collections": ["catalogo_stock"],
     "limit": 3,
-    "useLLMFilter": false,
-    "minRelevancia": 0.50
-  }'`}
+    "useLLMFilter": false
+  }'
+# minRelevancia: auto (0.68 sin LLM, 0.65 con LLM)`}
                   </pre>
                 </div>
               </div>
