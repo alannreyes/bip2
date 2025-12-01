@@ -37,7 +37,11 @@ export class SearchByTextDto {
 
   @IsOptional()
   @Type(() => Number)
-  minRelevancia?: number = 0.50; // Default: 0.50 (MISMA_CATEGORIA or better)
+  minRelevancia?: number; // Dynamic default based on useLLMFilter:
+  // - With LLM (useLLMFilter=true or not specified): 0.65 (LLM filters noise)
+  // - Without LLM (useLLMFilter=false): 0.68 (higher threshold compensates)
+  // If user specifies a value explicitly, that value is used.
+  //
   // Score RTI (Relevancia Técnica Industrial):
   // 1.00: EXACTO - Mismo producto exacto
   // 0.95: EQUIVALENTE - Nomenclatura diferente (6"=152mm)

@@ -71,10 +71,20 @@ export class SearchService {
     cliente?: string,
     useLLMFilter: boolean = false,
     payloadFilters?: { [key: string]: any },
-    minRelevancia: number = 0.50, // Minimum relevance threshold (applies to vectorial or RTI score)
+    minRelevancia?: number, // Dynamic default based on useLLMFilter
   ): Promise<any> {
+    // Dynamic threshold logic:
+    // - If user specifies minRelevancia explicitly, use that value
+    // - If useLLMFilter=true: use 0.65 (LLM filters noise, lower threshold OK)
+    // - If useLLMFilter=false: use 0.68 (higher threshold compensates for no LLM)
+    const effectiveMinRelevancia = minRelevancia !== undefined
+      ? minRelevancia
+      : useLLMFilter
+        ? 0.65  // With LLM: lower threshold, LLM will filter noise
+        : 0.68; // Without LLM: higher threshold to reduce noise
+
     this.logger.log(`Searching by text in collection: ${collectionName}`);
-    this.logger.debug(`Query: ${query}${marca ? `, Marca: ${marca}` : ''}${cliente ? `, Cliente: ${cliente}` : ''}${payloadFilters ? `, Payload Filters: ${JSON.stringify(payloadFilters)}` : ''} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${minRelevancia}`);
+    this.logger.debug(`Query: ${query}${marca ? `, Marca: ${marca}` : ''}${cliente ? `, Cliente: ${cliente}` : ''}${payloadFilters ? `, Payload Filters: ${JSON.stringify(payloadFilters)}` : ''} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${effectiveMinRelevancia}${minRelevancia === undefined ? ' (auto)' : ''}`);
 
     const startTime = Date.now();
 
@@ -205,9 +215,9 @@ export class SearchService {
           })
           // Filter by minRelevancia (RTI score must be >= threshold)
           .filter(r => {
-            const passesThreshold = r.score >= minRelevancia;
+            const passesThreshold = r.score >= effectiveMinRelevancia;
             if (!passesThreshold) {
-              this.logger.debug(`Filtered out ${r.id}: RTI=${r.score} < minRelevancia=${minRelevancia}`);
+              this.logger.debug(`Filtered out ${r.id}: RTI=${r.score} < minRelevancia=${effectiveMinRelevancia}`);
             }
             return passesThreshold;
           })
@@ -216,7 +226,7 @@ export class SearchService {
           // Trim to requested limit
           .slice(0, limit);
 
-        this.logger.log(`After RTI filter (≥${minRelevancia}): ${semanticallyFiltered.length} results`);
+        this.logger.log(`After RTI filter (≥${effectiveMinRelevancia}): ${semanticallyFiltered.length} results`);
 
       } else {
         // LLM filter DISABLED - use Qdrant vectorial scores with minRelevancia filter
@@ -229,16 +239,16 @@ export class SearchService {
           }))
           // Filter by minRelevancia (vectorial score must be >= threshold)
           .filter(r => {
-            const passesThreshold = r.score >= minRelevancia;
+            const passesThreshold = r.score >= effectiveMinRelevancia;
             if (!passesThreshold) {
-              this.logger.debug(`Filtered out ${r.id}: vectorial=${r.score} < minRelevancia=${minRelevancia}`);
+              this.logger.debug(`Filtered out ${r.id}: vectorial=${r.score} < minRelevancia=${effectiveMinRelevancia}`);
             }
             return passesThreshold;
           })
           // Already sorted by Qdrant, just trim
           .slice(0, limit);
 
-        this.logger.log(`After vectorial filter (≥${minRelevancia}): ${semanticallyFiltered.length} results`);
+        this.logger.log(`After vectorial filter (≥${effectiveMinRelevancia}): ${semanticallyFiltered.length} results`);
       }
 
       // Step 8: Final results (already filtered and trimmed)
@@ -1080,9 +1090,19 @@ export class SearchService {
     includeInternetSearch: boolean = false,
     useLLMFilter: boolean = false,
     payloadFilters?: { [key: string]: any },
-    minRelevancia: number = 0.50,
+    minRelevancia?: number, // Dynamic default based on useLLMFilter
   ): Promise<any> {
-    this.logger.log(`Searching by text in ${collectionNames.length} collections: ${collectionNames.join(', ')} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${minRelevancia}`);
+    // Dynamic threshold logic:
+    // - If user specifies minRelevancia explicitly, use that value
+    // - If useLLMFilter=true: use 0.65 (LLM filters noise, lower threshold OK)
+    // - If useLLMFilter=false: use 0.68 (higher threshold compensates for no LLM)
+    const effectiveMinRelevancia = minRelevancia !== undefined
+      ? minRelevancia
+      : useLLMFilter
+        ? 0.65  // With LLM: lower threshold, LLM will filter noise
+        : 0.68; // Without LLM: higher threshold to reduce noise
+
+    this.logger.log(`Searching by text in ${collectionNames.length} collections: ${collectionNames.join(', ')} | LLM Filter: ${useLLMFilter ? 'ON' : 'OFF'} | minRelevancia: ${effectiveMinRelevancia}${minRelevancia === undefined ? ' (auto)' : ''}`);
 
     const startTime = Date.now();
     const allResults: any[] = [];
@@ -1093,7 +1113,7 @@ export class SearchService {
       const searchPromises = collectionNames.map(async (collectionName) => {
         try {
           this.logger.debug(`Searching in collection: ${collectionName}`);
-          const result = await this.searchByText(query, collectionName, limit, marca, cliente, useLLMFilter, payloadFilters, minRelevancia);
+          const result = await this.searchByText(query, collectionName, limit, marca, cliente, useLLMFilter, payloadFilters, effectiveMinRelevancia);
 
           // Add collection name to each result
           const resultsWithCollection = result.results.map((r: any) => ({
@@ -1130,10 +1150,10 @@ export class SearchService {
       allResults.sort((a, b) => b.score - a.score);
 
       // Filter by minRelevancia threshold (RTI score)
-      const relevantResults = allResults.filter(r => r.score >= minRelevancia);
+      const relevantResults = allResults.filter(r => r.score >= effectiveMinRelevancia);
       const filteredCount = allResults.length - relevantResults.length;
       if (filteredCount > 0) {
-        this.logger.log(`Filtered out ${filteredCount} results below minRelevancia threshold (${minRelevancia})`);
+        this.logger.log(`Filtered out ${filteredCount} results below minRelevancia threshold (${effectiveMinRelevancia})`);
       }
 
       // Trim to requested limit
@@ -1178,7 +1198,8 @@ export class SearchService {
         marca,
         cliente,
         collections: collectionNames,
-        minRelevancia,
+        minRelevancia: effectiveMinRelevancia,
+        minRelevancia_auto: minRelevancia === undefined,
         duration: `${duration}ms`,
         total_results: allResults.length,
         filtered_by_relevancia: filteredCount,

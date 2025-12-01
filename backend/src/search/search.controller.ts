@@ -68,9 +68,9 @@ export class SearchController {
       dto.marca,
       dto.cliente,
       false, // Never include internet search in this endpoint
-      dto.useLLMFilter || false, // Optional LLM filter (default: OFF - trust embeddings)
+      dto.useLLMFilter ?? false, // Optional LLM filter (default: OFF - trust embeddings)
       dto.payloadFilters, // Optional payload filters for explicit field constraints
-      dto.minRelevancia ?? 0.50, // Filter results below this RTI score threshold
+      dto.minRelevancia, // Dynamic default in service: 0.65 with LLM, 0.68 without LLM
     );
   }
 
