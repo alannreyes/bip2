@@ -316,13 +316,50 @@ export default function ImageSearchPage() {
                             </div>
                           </div>
 
-                          <div className="space-y-0.5 text-xs">
-                            {Object.entries(result.payload).slice(0, 5).map(([key, value]) => (
-                              <div key={key} className="flex">
-                                <span className="text-muted-foreground min-w-[80px]">{key}:</span>
-                                <span className="truncate">{String(value)}</span>
+                          {/* Primary fields */}
+                          <div className="space-y-1 text-xs">
+                            {result.payload.Articulo_Codigo && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">
+                                  {result.payload.Articulo_Codigo}
+                                </span>
                               </div>
-                            ))}
+                            )}
+                            {result.payload.Articulo_Descripcion && (
+                              <div className="font-medium text-gray-900 text-sm">
+                                {result.payload.Articulo_Descripcion}
+                              </div>
+                            )}
+
+                            {/* Secondary info row */}
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {result.payload.Articulo_Lista_Costo && (
+                                <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded border border-green-200">
+                                  ${Number(result.payload.Articulo_Lista_Costo).toFixed(2)}
+                                </span>
+                              )}
+                              {result.payload.Articulo_De_Stock !== undefined && (
+                                <span className={`px-2 py-0.5 rounded border ${
+                                  result.payload.Articulo_De_Stock
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : 'bg-gray-50 text-gray-500 border-gray-200'
+                                }`}>
+                                  {result.payload.Articulo_De_Stock ? 'En Stock' : 'Sin Stock'}
+                                </span>
+                              )}
+                              {result.payload.Cantidad_Ventas_Ultimos_3_Anios !== undefined && (
+                                <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded border border-purple-200">
+                                  {result.payload.Cantidad_Ventas_Ultimos_3_Anios} ventas (3 años)
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Family */}
+                            {result.payload.Familia_Descripcion && (
+                              <div className="text-gray-500 mt-1">
+                                {result.payload.Familia_Descripcion}
+                              </div>
+                            )}
                           </div>
 
                           {/* Progress bar for score */}
