@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useCollections } from '@/hooks/use-collections';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
-import { Upload, Search, Image as ImageIcon, Loader2, Database, AlertCircle, X, FileText } from 'lucide-react';
+import { Upload, Search, Image as ImageIcon, Loader2, X, FileText, Code } from 'lucide-react';
 import { searchApi } from '@/lib/api';
 
 interface SearchResult {
@@ -24,6 +23,12 @@ export default function ImageSearchPage() {
   const [extractedText, setExtractedText] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [limit, setLimit] = useState(3); // Aligned with backend default
+
+  // JSON display states for developer demo
+  const [requestJson, setRequestJson] = useState<string>('');
+  const [responseJson, setResponseJson] = useState<string>('');
+  const [responseDuration, setResponseDuration] = useState<number>(0);
+  const [showJsonPanel, setShowJsonPanel] = useState<boolean>(true);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -61,6 +66,8 @@ export default function ImageSearchPage() {
     setPreviewUrl(null);
     setExtractedText('');
     setSearchResults([]);
+    setRequestJson('');
+    setResponseJson('');
   };
 
   const handleSearch = async () => {
@@ -73,31 +80,40 @@ export default function ImageSearchPage() {
       return;
     }
 
-    console.log('🔍 Starting search...');
-    console.log('File:', selectedFile.name, 'Type:', selectedFile.type, 'Size:', selectedFile.size);
-    console.log('Collection:', selectedCollection);
-    console.log('Limit:', limit);
-
     setIsSearching(true);
     setExtractedText('');
     setSearchResults([]);
 
+    // Build request info for JSON display (multipart/form-data)
+    const requestInfo = {
+      endpoint: 'POST /api/search/image',
+      contentType: 'multipart/form-data',
+      queryParams: {
+        collection: selectedCollection,
+        limit: limit,
+      },
+      body: {
+        image: `<File: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB, ${selectedFile.type})>`
+      }
+    };
+    setRequestJson(JSON.stringify(requestInfo, null, 2));
+    setResponseJson('');
+
+    const startTime = Date.now();
+
     try {
-      console.log('📤 Sending request to backend...');
       const response = await searchApi.searchByImage(selectedFile, selectedCollection, limit);
-      console.log('✅ Response received:', response);
+      setResponseDuration(Date.now() - startTime);
       setExtractedText(response.data.extractedText);
       setSearchResults(response.data.results);
-      console.log('✅ Results set:', response.data.results.length, 'results');
+      setResponseJson(JSON.stringify(response.data, null, 2));
     } catch (error: any) {
-      console.error('❌ Search error:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
+      setResponseDuration(Date.now() - startTime);
       const errorMsg = error.response?.data?.message || error.message || 'Error desconocido';
-      alert(`Error en búsqueda: ${errorMsg}\n\nRevisa la consola (F12) para más detalles.`);
+      setResponseJson(JSON.stringify(error.response?.data || { error: errorMsg }, null, 2));
+      alert(`Error en búsqueda: ${errorMsg}`);
     } finally {
       setIsSearching(false);
-      console.log('🏁 Search completed');
     }
   };
 
@@ -105,33 +121,48 @@ export default function ImageSearchPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="p-4 md:p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-6 md:mb-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Búsqueda por Imagen o PDF</h2>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
               Encuentra productos similares desde imágenes o documentos PDF
             </p>
+            <p className="text-xs text-gray-500 mt-1">
+              <strong>Endpoint:</strong> POST /api/search/image (multipart/form-data)
+            </p>
           </div>
 
-          <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+          {/* Toggle JSON Panel */}
+          <div className="mb-4 flex justify-end">
+            <button
+              onClick={() => setShowJsonPanel(!showJsonPanel)}
+              className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${
+                showJsonPanel ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              <Code className="h-4 w-4" />
+              {showJsonPanel ? 'Ocultar JSON' : 'Ver JSON'}
+            </button>
+          </div>
+
+          <div className={`grid gap-4 md:gap-6 ${showJsonPanel ? 'xl:grid-cols-3' : 'lg:grid-cols-2'}`}>
             {/* Search Input Panel */}
-            <div className="space-y-4 md:space-y-6">
+            <div className="space-y-4">
               {/* Collection Selection */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base md:text-lg">1. Selecciona Colección</CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Elige la colección donde buscar</CardDescription>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">1. Selecciona Colección</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <select
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
                     value={selectedCollection}
                     onChange={(e) => setSelectedCollection(e.target.value)}
                   >
                     <option value="">-- Selecciona una colección --</option>
                     {collections?.map((collection: any) => (
                       <option key={collection.id} value={collection.name}>
-                        {collection.name} ({collection.totalPoints} puntos)
+                        {collection.name} ({collection.totalPoints})
                       </option>
                     ))}
                   </select>
@@ -140,23 +171,18 @@ export default function ImageSearchPage() {
 
               {/* Image Upload */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base md:text-lg">2. Captura o Sube un Archivo</CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Toma una foto, selecciona imagen o sube un PDF (máx 10MB)</CardDescription>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">2. Captura o Sube Archivo</CardTitle>
+                  <CardDescription className="text-xs">Imagen o PDF (máx 10MB)</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {!previewUrl ? (
                     <div className="space-y-3">
                       {/* Camera Capture Button */}
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-primary border-dashed rounded-lg cursor-pointer bg-primary/5 hover:bg-primary/10 transition-colors">
+                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-primary border-dashed rounded-lg cursor-pointer bg-primary/5 hover:bg-primary/10 transition-colors">
                         <div className="flex flex-col items-center justify-center">
-                          <ImageIcon className="h-10 w-10 text-primary mb-2" />
-                          <p className="text-sm font-semibold text-primary">
-                            📷 Capturar con Cámara
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Tomar foto ahora
-                          </p>
+                          <ImageIcon className="h-8 w-8 text-primary mb-1" />
+                          <p className="text-sm font-semibold text-primary">Capturar con Cámara</p>
                         </div>
                         <input
                           type="file"
@@ -168,12 +194,10 @@ export default function ImageSearchPage() {
                       </label>
 
                       {/* Gallery Selection Button */}
-                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                         <div className="flex flex-col items-center justify-center">
-                          <Upload className="h-8 w-8 text-gray-400 mb-1" />
-                          <p className="text-sm text-gray-600">
-                            Seleccionar Imagen o PDF
-                          </p>
+                          <Upload className="h-6 w-6 text-gray-400 mb-1" />
+                          <p className="text-sm text-gray-600">Seleccionar Imagen o PDF</p>
                         </div>
                         <input
                           type="file"
@@ -186,15 +210,15 @@ export default function ImageSearchPage() {
                   ) : (
                     <div className="relative">
                       {previewUrl === 'pdf' ? (
-                        <div className="w-full h-64 flex flex-col items-center justify-center rounded-lg border bg-gray-50">
-                          <FileText className="h-20 w-20 text-red-600 mb-2" />
+                        <div className="w-full h-40 flex flex-col items-center justify-center rounded-lg border bg-gray-50">
+                          <FileText className="h-16 w-16 text-red-600 mb-2" />
                           <p className="text-sm font-medium text-gray-700">Archivo PDF</p>
                         </div>
                       ) : (
                         <img
                           src={previewUrl || ''}
                           alt="Preview"
-                          className="w-full h-64 object-contain rounded-lg border"
+                          className="w-full h-40 object-contain rounded-lg border"
                         />
                       )}
                       <Button
@@ -205,7 +229,7 @@ export default function ImageSearchPage() {
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      <div className="mt-2 text-sm text-muted-foreground text-center">
+                      <div className="mt-2 text-xs text-muted-foreground text-center">
                         {selectedFile?.name} ({(selectedFile!.size / 1024).toFixed(1)} KB)
                       </div>
                     </div>
@@ -215,19 +239,19 @@ export default function ImageSearchPage() {
 
               {/* Search Button */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base md:text-lg">3. Configuración de Búsqueda</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">3. Configuración</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   <div>
-                    <label className="block text-xs md:text-sm font-medium mb-2">
+                    <label className="block text-xs font-medium mb-1">
                       Número de resultados
                     </label>
                     <input
                       type="number"
                       min="1"
                       max="50"
-                      className="w-full px-3 py-2 text-sm md:text-base border rounded-md"
+                      className="w-full px-3 py-2 text-sm border rounded-md"
                       value={limit}
                       onChange={(e) => setLimit(parseInt(e.target.value))}
                     />
@@ -236,18 +260,17 @@ export default function ImageSearchPage() {
                   <Button
                     onClick={handleSearch}
                     disabled={!selectedFile || !selectedCollection || isSearching}
-                    className="w-full text-sm md:text-base"
-                    size="lg"
+                    className="w-full"
                   >
                     {isSearching ? (
                       <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Buscando...
                       </>
                     ) : (
                       <>
-                        <Search className="mr-2 h-5 w-5" />
-                        Buscar Productos Similares
+                        <Search className="mr-2 h-4 w-4" />
+                        Buscar Similares
                       </>
                     )}
                   </Button>
@@ -257,37 +280,35 @@ export default function ImageSearchPage() {
 
             {/* Results Panel */}
             <div>
-              <Card className="lg:sticky lg:top-8">
-                <CardHeader>
-                  <CardTitle className="text-lg md:text-xl">Resultados de Búsqueda</CardTitle>
-                  <CardDescription className="text-sm">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Resultados</CardTitle>
+                  <CardDescription className="text-xs">
                     {searchResults.length > 0
-                      ? `${searchResults.length} productos encontrados`
+                      ? `${searchResults.length} productos encontrados${responseDuration ? ` (${responseDuration}ms)` : ''}`
                       : 'Los resultados aparecerán aquí'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {/* Extracted Text */}
                   {extractedText && (
-                    <div className="mb-4 md:mb-6 p-3 md:p-4 bg-gray-50 rounded-lg">
-                      <div className="text-xs md:text-sm font-medium mb-2">Texto Extraído:</div>
-                      <div className="text-xs md:text-sm text-gray-700">{extractedText}</div>
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="text-xs font-medium mb-1">Texto Extraído:</div>
+                      <div className="text-xs text-gray-700">{extractedText}</div>
                     </div>
                   )}
 
                   {/* Results List */}
                   {searchResults.length > 0 ? (
-                    <div className="space-y-3 md:space-y-4 max-h-[400px] md:max-h-[600px] overflow-y-auto">
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto">
                       {searchResults.map((result, index) => (
                         <div
                           key={index}
-                          className="p-3 md:p-4 border rounded-lg hover:shadow-md transition-shadow"
+                          className="p-3 border rounded-lg hover:shadow-sm transition-shadow"
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <div className="text-sm md:text-base font-medium">
-                              Resultado #{index + 1}
-                            </div>
-                            <div className="text-xs md:text-sm">
+                            <div className="text-sm font-medium">#{index + 1}</div>
+                            <div className="text-xs">
                               <span className="text-muted-foreground">Score: </span>
                               <span className="font-mono font-medium text-green-600">
                                 {(result.score * 100).toFixed(1)}%
@@ -295,24 +316,20 @@ export default function ImageSearchPage() {
                             </div>
                           </div>
 
-                          <div className="space-y-1 text-xs md:text-sm">
-                            {Object.entries(result.payload).map(([key, value]) => (
-                              <div key={key} className="flex flex-col sm:flex-row gap-1">
-                                <span className="text-muted-foreground sm:min-w-[120px] font-medium">
-                                  {key}:
-                                </span>
-                                <span className="break-all">
-                                  {String(value)}
-                                </span>
+                          <div className="space-y-0.5 text-xs">
+                            {Object.entries(result.payload).slice(0, 5).map(([key, value]) => (
+                              <div key={key} className="flex">
+                                <span className="text-muted-foreground min-w-[80px]">{key}:</span>
+                                <span className="truncate">{String(value)}</span>
                               </div>
                             ))}
                           </div>
 
                           {/* Progress bar for score */}
-                          <div className="mt-3">
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div className="mt-2">
+                            <div className="w-full bg-gray-200 rounded-full h-1">
                               <div
-                                className="bg-green-600 h-1.5 rounded-full"
+                                className="bg-green-600 h-1 rounded-full"
                                 style={{ width: `${result.score * 100}%` }}
                               />
                             </div>
@@ -321,21 +338,57 @@ export default function ImageSearchPage() {
                       ))}
                     </div>
                   ) : isSearching ? (
-                    <div className="text-center py-12">
-                      <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-                      <p className="text-muted-foreground">Procesando imagen y buscando...</p>
+                    <div className="text-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                      <p className="text-sm text-muted-foreground">Procesando imagen...</p>
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <ImageIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                      <p className="text-muted-foreground">
-                        Sube una imagen o PDF para comenzar la búsqueda
+                    <div className="text-center py-8">
+                      <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-2 opacity-50" />
+                      <p className="text-sm text-muted-foreground">
+                        Sube una imagen o PDF para comenzar
                       </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </div>
+
+            {/* JSON Panel (Developer Reference) */}
+            {showJsonPanel && (
+              <div className="space-y-4">
+                {/* Request JSON */}
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h2 className="text-sm font-bold mb-1">Request Info</h2>
+                  <p className="text-xs text-gray-500 mb-2">POST /api/search/image</p>
+                  <pre className="bg-gray-900 text-green-400 p-3 rounded text-xs overflow-x-auto max-h-48 overflow-y-auto">
+                    {requestJson || '// Request aparecerá aquí'}
+                  </pre>
+                </div>
+
+                {/* Response JSON */}
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h2 className="text-sm font-bold mb-1">Response JSON</h2>
+                  <p className="text-xs text-gray-500 mb-2">
+                    {responseDuration ? `${responseDuration}ms` : 'Esperando...'}
+                  </p>
+                  <pre className="bg-gray-900 text-blue-400 p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">
+                    {responseJson || '// Response aparecerá aquí'}
+                  </pre>
+                </div>
+
+                {/* cURL example */}
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h2 className="text-sm font-bold mb-2">cURL Ejemplo</h2>
+                  <pre className="bg-gray-800 text-gray-300 p-3 rounded text-xs overflow-x-auto">
+{`curl -X POST \\
+  "http://localhost:3001/api/search/image?collection=catalogo_stock&limit=3" \\
+  -H "Content-Type: multipart/form-data" \\
+  -F "image=@/path/to/image.jpg"`}
+                  </pre>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
