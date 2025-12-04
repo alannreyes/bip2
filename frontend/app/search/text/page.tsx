@@ -40,23 +40,11 @@ export default function TextSearchPage() {
   const [limit, setLimit] = useState(3); // RTI v2.0: Default 3 for precision-focused results
   const [marca, setMarca] = useState<string>('');
   const [cliente, setCliente] = useState<string>('');
-  const [includeInternetSearch, setIncludeInternetSearch] = useState<boolean>(false); // Backend default: false
   const [useLLMFilter, setUseLLMFilter] = useState<boolean>(false); // Backend default: false - trust embeddings
   const [minRelevancia, setMinRelevancia] = useState<number | undefined>(undefined); // Backend default: dynamic (0.65 con LLM, 0.70 sin LLM)
-  const [internetResults, setInternetResults] = useState<any>(null);
-  const [quickProductInfo, setQuickProductInfo] = useState<any>(null); // Quick identification (shows first)
   const [clientFilterMessage, setClientFilterMessage] = useState<string>(''); // Client filter UX message
 
-  // SSE states
-  const [isLoadingInternet, setIsLoadingInternet] = useState(false);
-  const [internetProgress, setInternetProgress] = useState<string>('');
-  const [internetError, setInternetError] = useState<string>('');
-
-  // Parallel search states - Progressive results
-  const [suppliersResults, setSuppliersResults] = useState<any>(null);
-  const [specsResults, setSpecsResults] = useState<any>(null);
-  const [pricesResults, setPricesResults] = useState<any>(null);
-  const [alternativesResults, setAlternativesResults] = useState<any>(null);
+  // SECURITY: Internet search states removed - was causing firewall alerts
 
   // JSON display states for developer demo
   const [requestJson, setRequestJson] = useState<string>('');
@@ -81,102 +69,8 @@ export default function TextSearchPage() {
     }
   };
 
-  // Handle SSE connection for internet search
-  const handleInternetSearchSSE = (searchQuery: string, collections: string[]) => {
-    setIsLoadingInternet(true);
-    setInternetProgress('Conectando...');
-    setInternetError('');
-
-    // Build dynamic API URL based on current hostname
-    const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    const apiUrl = `${protocol}//${hostname}:3001/api`;
-
-    const eventSource = new EventSource(
-      `${apiUrl}/search/internet?query=${encodeURIComponent(searchQuery)}&collections=${collections.join(',')}`
-    );
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        switch (data.type) {
-          case 'embedding_start':
-            setInternetProgress(data.message);
-            break;
-          case 'embedding_complete':
-            setInternetProgress(`${data.message} (${data.duration})`);
-            break;
-          case 'search_start':
-            setInternetProgress(data.message);
-            break;
-          case 'search_complete':
-            setInternetProgress(`${data.message} (${data.duration})`);
-            break;
-          case 'quick_identification_start':
-            setInternetProgress(data.message);
-            break;
-          case 'product_identified':
-            setInternetProgress(`${data.message} (${data.duration})`);
-            if (data.productInfo && data.productInfo.identificado) {
-              setQuickProductInfo(data.productInfo);
-            }
-            break;
-
-          // PARALLEL SEARCHES
-          case 'parallel_search_start':
-            setInternetProgress(data.message);
-            break;
-
-          case 'suppliers_search_complete':
-            setSuppliersResults(data.results);
-            break;
-
-          case 'specs_search_complete':
-            setSpecsResults(data.results);
-            break;
-
-          case 'prices_search_complete':
-            setPricesResults(data.results);
-            break;
-
-          case 'alternatives_search_complete':
-            setAlternativesResults(data.results);
-            break;
-
-          case 'all_searches_complete':
-            setInternetProgress(`✅ ${data.message}`);
-            setInternetResults(data.results);
-            setIsLoadingInternet(false);
-            eventSource.close();
-            break;
-
-          // LEGACY events (for backward compatibility)
-          case 'internet_complete':
-            setInternetProgress(`${data.message} (${data.duration})`);
-            setInternetResults(data.results);
-            setIsLoadingInternet(false);
-            eventSource.close();
-            break;
-
-          case 'error':
-            setInternetError(data.message);
-            setIsLoadingInternet(false);
-            eventSource.close();
-            break;
-        }
-      } catch (err) {
-        console.error('Error parsing SSE data:', err);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('SSE Error:', error);
-      setInternetError('Error en conexión SSE');
-      setIsLoadingInternet(false);
-      eventSource.close();
-    };
-  };
+  // SECURITY: handleInternetSearchSSE() removed - was causing firewall alerts
+  // due to Google Search Grounding visiting external URLs
 
   // Load example query
   const loadExample = (example: 'tool' | 'food' | 'industrial') => {
@@ -210,16 +104,8 @@ export default function TextSearchPage() {
 
     setIsSearching(true);
     setSearchResults([]);
-    setInternetResults(null);
-    setQuickProductInfo(null);
     setSearchDuration('');
-    setInternetProgress('');
-    setInternetError('');
     setClientFilterMessage('');
-    setSuppliersResults(null);
-    setSpecsResults(null);
-    setPricesResults(null);
-    setAlternativesResults(null);
 
     // Build request body for JSON display
     const requestBody: any = {
@@ -255,10 +141,7 @@ export default function TextSearchPage() {
         setClientFilterMessage(response.data.client_filter_message);
       }
 
-      // Start internet search via SSE (if enabled)
-      if (includeInternetSearch) {
-        handleInternetSearchSSE(query.trim(), selectedCollections);
-      }
+      // SECURITY: Internet search removed - was causing firewall alerts
     } catch (error: any) {
       const errorData = error.response?.data || { error: error.message };
       setResponseJson(JSON.stringify(errorData, null, 2));
@@ -411,19 +294,6 @@ export default function TextSearchPage() {
                     </div>
 
                     <div className="space-y-2 pt-2 border-t">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="internet-search"
-                          checked={includeInternetSearch}
-                          onChange={(e) => setIncludeInternetSearch(e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                        <label htmlFor="internet-search" className="text-xs">
-                          Buscar en Internet
-                        </label>
-                      </div>
-
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
@@ -639,21 +509,7 @@ export default function TextSearchPage() {
                     </div>
                   )}
 
-                  {/* Internet Progress */}
-                  {isLoadingInternet && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                        <span className="text-sm text-blue-700">{internetProgress}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {internetError && (
-                    <div className="mt-4 p-3 bg-red-50 rounded text-sm text-red-700">
-                      {internetError}
-                    </div>
-                  )}
+                  {/* SECURITY: Internet Progress UI removed - was causing firewall alerts */}
                 </CardContent>
               </Card>
             </div>

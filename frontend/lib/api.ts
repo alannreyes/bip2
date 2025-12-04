@@ -85,7 +85,7 @@ export const searchApi = {
     limit?: number; // Default: 3 (backend)
     marca?: string;
     cliente?: string;
-    includeInternetSearch?: boolean;
+    // SECURITY: includeInternetSearch removed - was causing firewall alerts
     useLLMFilter?: boolean; // Default: false (backend) - trust embeddings
     minRelevancia?: number; // Default: 0.70 sin LLM, 0.65 con LLM (backend)
     payloadFilters?: Record<string, any>;

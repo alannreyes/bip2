@@ -25,10 +25,8 @@ export class SearchByTextDto {
   @IsString()
   cliente?: string;
 
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  includeInternetSearch?: boolean;
+  // SECURITY: includeInternetSearch removed - was causing firewall alerts
+  // due to Google Search Grounding visiting external URLs
 
   @IsOptional()
   @Type(() => Boolean)

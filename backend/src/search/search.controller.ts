@@ -8,14 +8,11 @@ import {
   BadRequestException,
   Query,
   Param,
-  Sse,
-  MessageEvent,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SearchService } from './search.service';
 import { SearchByTextDto } from './dto/search-by-text.dto';
 import { QdrantService } from '../qdrant/qdrant.service';
-import { Observable } from 'rxjs';
 
 @Controller('search')
 export class SearchController {
@@ -159,19 +156,6 @@ export class SearchController {
     );
   }
 
-  @Sse('internet')
-  searchInternet(@Query('query') query: string, @Query('collections') collections: string): Observable<MessageEvent> {
-    if (!query) {
-      throw new BadRequestException('Query text is required');
-    }
-
-    if (!collections) {
-      throw new BadRequestException('Collections are required');
-    }
-
-    const collectionArray = collections.split(',');
-
-    return this.searchService.searchInternetStream(query, collectionArray);
-  }
-
+  // SECURITY: Internet search endpoint removed - was causing firewall alerts
+  // due to Google Search Grounding visiting external URLs
 }
