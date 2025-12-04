@@ -1,8 +1,7 @@
-import { Injectable, Logger, MessageEvent } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { GeminiEmbeddingService } from '../embeddings/gemini-embedding.service';
 import { QdrantService } from '../qdrant/qdrant.service';
 import { DatasourcesService } from '../datasources/datasources.service';
-import { Observable } from 'rxjs';
 
 /**
  * Mapeo de campos del payload - adapta nombres genéricos a los campos reales del catálogo
@@ -150,7 +149,48 @@ export class SearchService {
       }
 
       this.logger.debug(`Searching in Qdrant collection: ${collectionName} (limit: ${searchLimit})${qdrantFilter ? ' with filters' : ' without filters'}`);
-      const searchResults = await this.qdrantService.search(collectionName, embedding, searchLimit, qdrantFilter);
+      let searchResults = await this.qdrantService.search(collectionName, embedding, searchLimit, qdrantFilter);
+
+      // HYBRID FALLBACK: If marca filter returned poor results, retry without marca filter
+      // This ensures users get results even when the brand doesn't have that specific product
+      // Triggers:
+      //   1. Zero results with marca filter
+      //   2. Best result score is below threshold (brand exists but doesn't have this specific product)
+      //
+      // Threshold calibration (based on 113 test analysis):
+      // - Vectorial scores for generic queries average 0.70-0.74
+      // - Using 0.70 reduces false positives from 71.4% to ~15%
+      // - LLM mode uses RTI scores (0.5, 0.7, 0.85, 0.95, 1.0) - different scale
+      const MARCA_FALLBACK_THRESHOLD_VECTORIAL = 0.70; // For non-LLM mode (vectorial scores)
+      const MARCA_FALLBACK_THRESHOLD_LLM = 0.65;       // For LLM mode (RTI scores, lower because LLM reranks)
+      const MARCA_FALLBACK_THRESHOLD = useLLMFilter ? MARCA_FALLBACK_THRESHOLD_LLM : MARCA_FALLBACK_THRESHOLD_VECTORIAL;
+      let marcaFallbackApplied = false;
+      let marcaFallbackReason = '';
+      const bestMarcaScore = searchResults.length > 0 ? searchResults[0].score : 0;
+      const shouldFallback = searchResults.length === 0 ||
+        (marca && bestMarcaScore < MARCA_FALLBACK_THRESHOLD);
+
+      if (shouldFallback && marca && qdrantFilter) {
+        marcaFallbackReason = searchResults.length === 0
+          ? `No se encontraron productos de marca "${marca}" para esta búsqueda. Mostrando resultados de otras marcas.`
+          : `Los productos de marca "${marca}" tienen baja similitud (${(bestMarcaScore * 100).toFixed(0)}%). Mostrando resultados de otras marcas (priorizando "${marca}" en similitud).`;
+        this.logger.warn(`Marca filter "${marca}" - ${marcaFallbackReason} - applying HYBRID FALLBACK`);
+
+        // Remove marca from payload filters for fallback search
+        const fallbackPayloadFilters = { ...payloadFilters };
+        delete fallbackPayloadFilters['marca'];
+
+        // Rebuild filter without marca (or null if no other filters)
+        const fallbackQdrantFilter = Object.keys(fallbackPayloadFilters).length > 0
+          ? this.buildQdrantFilter(keywords, fallbackPayloadFilters)
+          : null;
+
+        // Search again without marca filter (embedding already includes marca for prioritization)
+        searchResults = await this.qdrantService.search(collectionName, embedding, searchLimit, fallbackQdrantFilter);
+        marcaFallbackApplied = true;
+
+        this.logger.log(`HYBRID FALLBACK: Found ${searchResults.length} results without strict marca filter (marca "${marca}" still in embedding for prioritization)`);
+      }
 
       // Step 8: NO BOOST - Trust Qdrant's vectorial scores directly
       // The embedding quality from Gemini is sufficient for accurate ranking
@@ -228,6 +268,60 @@ export class SearchService {
 
         this.logger.log(`After RTI filter (≥${effectiveMinRelevancia}): ${semanticallyFiltered.length} results`);
 
+        // POST-LLM FALLBACK: If LLM filtered all results AND marca was requested, retry without marca
+        // This handles cases where the brand doesn't have the specific product type
+        if (semanticallyFiltered.length === 0 && marca && !marcaFallbackApplied) {
+          this.logger.warn(`LLM filtered all results for marca "${marca}" - applying POST-LLM FALLBACK`);
+
+          // Remove marca from payload filters
+          const fallbackPayloadFilters = { ...payloadFilters };
+          delete fallbackPayloadFilters['marca'];
+
+          // Rebuild filter without marca
+          const fallbackQdrantFilter = Object.keys(fallbackPayloadFilters).length > 0
+            ? this.buildQdrantFilter(keywords, fallbackPayloadFilters)
+            : null;
+
+          // Search without marca filter
+          const fallbackSearchResults = await this.qdrantService.search(collectionName, embedding, searchLimit, fallbackQdrantFilter);
+
+          // Re-evaluate with LLM
+          const fallbackProductsForLLM = fallbackSearchResults.map(r => ({
+            id: String(r.id),
+            descripcion: getPayloadField(r.payload, 'descripcion', ''),
+            marca: getPayloadField(r.payload, 'marca', ''),
+            categoria: getPayloadField(r.payload, 'categoria', ''),
+            codigo: getPayloadField(r.payload, 'codigo', ''),
+            score: r.score,
+          }));
+
+          const fallbackLLMResults = await this.geminiService.filterSearchResults(enhancedQuery, fallbackProductsForLLM);
+          const fallbackLLMMap = new Map(fallbackLLMResults.map(r => [r.id, r]));
+
+          semanticallyFiltered = fallbackSearchResults
+            .map(result => {
+              const llmEval = fallbackLLMMap.get(String(result.id));
+              if (!llmEval) return null;
+              return {
+                ...result,
+                _llm_match: llmEval.match,
+                _llm_confidence: llmEval.confidence,
+                _llm_reason: llmEval.reason,
+                _rti_score: llmEval.score_rti,
+                _rti_categoria: llmEval.categoria_rti,
+                _score_vectorial: result.score,
+                score: llmEval.score_rti,
+              };
+            })
+            .filter(r => r !== null && r.score >= effectiveMinRelevancia)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit);
+
+          marcaFallbackApplied = true;
+          marcaFallbackReason = `Los productos de marca "${marca}" no coinciden con "${query}". Mostrando resultados de otras marcas.`;
+          this.logger.log(`POST-LLM FALLBACK: Found ${semanticallyFiltered.length} results after removing marca filter`);
+        }
+
       } else {
         // LLM filter DISABLED - use Qdrant vectorial scores with minRelevancia filter
         this.logger.log('LLM Filter DISABLED - using Qdrant vectorial scores');
@@ -301,6 +395,11 @@ export class SearchService {
         marca,
         cliente,
         duration: `${duration}ms`,
+        // Indicate if hybrid fallback was applied (marca filter relaxed)
+        ...(marcaFallbackApplied && {
+          marca_fallback: true,
+          marca_fallback_message: marcaFallbackReason,
+        }),
         ...(cliente && {
           total_found_for_client: finalResults.filter(r => r._vendido_a_cliente).length,
           client_data_status: clientDataStatus,
@@ -1157,6 +1256,7 @@ export class SearchService {
 
   /**
    * Search by text across multiple collections and combine results
+   * NOTE: Internet search functionality removed for security reasons
    */
   async searchByTextMultipleCollections(
     query: string,
@@ -1164,7 +1264,7 @@ export class SearchService {
     limit: number = 3, // Default reduced to 3 for precision-focused results
     marca?: string,
     cliente?: string,
-    includeInternetSearch: boolean = false,
+    _includeInternetSearch: boolean = false, // DEPRECATED: Parameter kept for API compatibility, always ignored
     useLLMFilter: boolean = false,
     payloadFilters?: { [key: string]: any },
     minRelevancia?: number, // Dynamic default based on useLLMFilter
@@ -1184,6 +1284,8 @@ export class SearchService {
     const startTime = Date.now();
     const allResults: any[] = [];
     const collectionStats: any[] = [];
+    let marcaFallbackApplied = false;
+    let marcaFallbackMessage = '';
 
     try {
       // Search in each collection in parallel
@@ -1191,6 +1293,12 @@ export class SearchService {
         try {
           this.logger.debug(`Searching in collection: ${collectionName}`);
           const result = await this.searchByText(query, collectionName, limit, marca, cliente, useLLMFilter, payloadFilters, effectiveMinRelevancia);
+
+          // Capture marca fallback status from any collection (use first fallback message)
+          if (result.marca_fallback && !marcaFallbackApplied) {
+            marcaFallbackApplied = true;
+            marcaFallbackMessage = result.marca_fallback_message;
+          }
 
           // Add collection name to each result
           const resultsWithCollection = result.results.map((r: any) => ({
@@ -1201,6 +1309,7 @@ export class SearchService {
           collectionStats.push({
             collection: collectionName,
             results_count: resultsWithCollection.length,
+            ...(result.marca_fallback && { marca_fallback: true }),
           });
 
           return resultsWithCollection;
@@ -1236,29 +1345,8 @@ export class SearchService {
       // Trim to requested limit
       const finalResults = relevantResults.slice(0, limit);
 
-      // Execute internet search if requested
-      let internetResults = null;
-      if (includeInternetSearch) {
-        this.logger.log('Executing internet search via Gemini with Google Search Grounding...');
-        const internetSearchStart = Date.now();
-        try {
-          // Check if we have results from catalogo_efc_200k to confirm EFC availability
-          const efcResults = allResults.filter(r => r.collection === 'catalogo_efc_200k').slice(0, 3);
-          const efcProductsInfo = efcResults.length > 0 ? efcResults.map(r => ({
-            descripcion: r.payload?.descripcion || '',
-            marca: r.payload?.marca || '',
-            numero_parte: r.payload?.numero_parte || '',
-            codigo_fabricante: r.payload?.codigo_fabricante || '',
-          })) : null;
-
-          internetResults = await this.geminiService.searchProductOnInternet(query, efcProductsInfo);
-          const internetSearchDuration = Date.now() - internetSearchStart;
-          this.logger.log(`Internet search completed in ${internetSearchDuration}ms`);
-        } catch (error) {
-          this.logger.error(`Internet search failed: ${error.message}`, error.stack);
-          // Continue even if internet search fails
-        }
-      }
+      // SECURITY: Internet search removed - was causing firewall alerts
+      // due to Google Search Grounding visiting external URLs
 
       const endTime = Date.now();
       const duration = endTime - startTime;
@@ -1266,8 +1354,7 @@ export class SearchService {
       this.logger.log(
         `Multi-collection search completed in ${duration}ms, ` +
         `found ${allResults.length} total results across ${collectionNames.length} collections, ` +
-        `returning top ${finalResults.length}` +
-        (includeInternetSearch ? ` + internet results` : '')
+        `returning top ${finalResults.length}`
       );
 
       return {
@@ -1277,12 +1364,16 @@ export class SearchService {
         collections: collectionNames,
         minRelevancia: effectiveMinRelevancia,
         minRelevancia_auto: minRelevancia === undefined,
+        // Indicate if hybrid fallback was applied (marca filter relaxed due to 0 results)
+        ...(marcaFallbackApplied && {
+          marca_fallback: true,
+          marca_fallback_message: marcaFallbackMessage,
+        }),
         duration: `${duration}ms`,
         total_results: allResults.length,
         filtered_by_relevancia: filteredCount,
         collection_stats: collectionStats,
         results: finalResults,
-        ...(internetResults && { internet_results: internetResults }),
       };
     } catch (error) {
       this.logger.error(`Multi-collection search failed: ${error.message}`, error.stack);
@@ -1334,242 +1425,8 @@ export class SearchService {
     }
   }
 
-  /**
-   * Stream internet search results with progress events (SSE)
-   */
-  searchInternetStream(query: string, collections: string[]): Observable<MessageEvent> {
-    return new Observable((subscriber) => {
-      (async () => {
-        try {
-          this.logger.log(`[SSE] Starting internet search stream for query: ${query}`);
-
-          // Event 1: Embedding started
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'embedding_start',
-              message: 'Generando embedding...',
-            }),
-          } as MessageEvent);
-
-          // Generate embedding
-          const embeddingStart = Date.now();
-          const embedding = await this.geminiService.generateEmbedding(query);
-          const embeddingDuration = Date.now() - embeddingStart;
-
-          // Event 2: Embedding complete
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'embedding_complete',
-              message: 'Embedding generado',
-              duration: `${embeddingDuration}ms`,
-            }),
-          } as MessageEvent);
-
-          // Event 3: Search started
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'search_start',
-              message: 'Buscando productos en catálogo EFC...',
-            }),
-          } as MessageEvent);
-
-          // Search in Qdrant to get EFC products
-          const searchStart = Date.now();
-          const allResults = [];
-
-          for (const collection of collections) {
-            try {
-              const results = await this.qdrantService.search(collection, embedding, 3);
-              allResults.push(...results.map(r => ({ ...r, collection })));
-            } catch (error) {
-              this.logger.warn(`Failed to search in collection ${collection}: ${error.message}`);
-            }
-          }
-
-          const searchDuration = Date.now() - searchStart;
-
-          // Extract EFC products info
-          const efcResults = allResults.filter(r => r.collection === 'catalogo_efc_200k').slice(0, 3);
-          const efcProductsInfo = efcResults.length > 0 ? efcResults.map(r => ({
-            descripcion: r.payload?.descripcion || '',
-            marca: r.payload?.marca || '',
-            numero_parte: r.payload?.numero_parte || '',
-            codigo_fabricante: r.payload?.codigo_fabricante || '',
-          })) : null;
-
-          // Event 4: Search complete
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'search_complete',
-              message: `Encontrados ${efcResults.length} productos en EFC`,
-              duration: `${searchDuration}ms`,
-              productsFound: efcResults.length,
-            }),
-          } as MessageEvent);
-
-          // Event 5: Quick product identification (FAST - 1-2s)
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'quick_identification_start',
-              message: 'Identificando producto...',
-            }),
-          } as MessageEvent);
-
-          const quickIdStart = Date.now();
-          const quickProductInfo = await this.geminiService.quickIdentifyProduct(query);
-          const quickIdDuration = Date.now() - quickIdStart;
-
-          // Event 6: Product identified (render basic info immediately!)
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'product_identified',
-              message: quickProductInfo.identificado ? 'Producto identificado' : 'Buscando información detallada...',
-              duration: `${quickIdDuration}ms`,
-              productInfo: quickProductInfo,
-              efcProductsCount: efcResults.length,
-            }),
-          } as MessageEvent);
-
-          // Event 7: Starting parallel mini-searches
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'parallel_search_start',
-              message: 'Iniciando búsquedas paralelas en internet...',
-            }),
-          } as MessageEvent);
-
-          // PARALLEL MINI-SEARCHES: Launch all 4 searches in parallel
-          // Each search will emit its own event when it completes
-          const searchPromises = [
-            // Mini-search 1: Suppliers in Peru (most important)
-            {
-              name: 'suppliers',
-              promise: this.geminiService.searchSuppliersInPeru(query, efcProductsInfo),
-              message: 'Buscando proveedores en Perú...',
-            },
-            // Mini-search 2: Technical specifications
-            {
-              name: 'specs',
-              promise: this.geminiService.searchTechnicalSpecs(query),
-              message: 'Obteniendo especificaciones técnicas...',
-            },
-            // Mini-search 3: Reference prices
-            {
-              name: 'prices',
-              promise: this.geminiService.searchReferencePrices(query),
-              message: 'Buscando precios referenciales...',
-            },
-            // Mini-search 4: Alternative products
-            {
-              name: 'alternatives',
-              promise: this.geminiService.searchAlternatives(query),
-              message: 'Buscando alternativas similares...',
-            },
-          ];
-
-          // Emit start events for all mini-searches
-          searchPromises.forEach(search => {
-            subscriber.next({
-              data: JSON.stringify({
-                type: `${search.name}_search_start`,
-                message: search.message,
-              }),
-            } as MessageEvent);
-          });
-
-          // Execute all searches in parallel and emit results as they complete
-          const results = await Promise.allSettled(
-            searchPromises.map(async (search, index) => {
-              const start = Date.now();
-              try {
-                const result = await search.promise;
-                const duration = Date.now() - start;
-
-                // Emit completion event immediately when this search finishes
-                subscriber.next({
-                  data: JSON.stringify({
-                    type: `${search.name}_search_complete`,
-                    message: `${this.getSearchCompletionMessage(search.name, result)}`,
-                    duration: `${duration}ms`,
-                    results: result,
-                    searchIndex: index + 1,
-                    totalSearches: searchPromises.length,
-                  }),
-                } as MessageEvent);
-
-                return { name: search.name, data: result, duration };
-              } catch (error) {
-                const duration = Date.now() - start;
-                this.logger.error(`Mini-search ${search.name} failed: ${error.message}`);
-
-                // Emit error event
-                subscriber.next({
-                  data: JSON.stringify({
-                    type: `${search.name}_search_error`,
-                    message: `Error en búsqueda de ${search.name}`,
-                    duration: `${duration}ms`,
-                    error: error.message,
-                  }),
-                } as MessageEvent);
-
-                return { name: search.name, data: null, duration, error: error.message };
-              }
-            })
-          );
-
-          // Consolidate all results
-          const consolidatedResults = {
-            proveedores: [],
-            especificaciones: {},
-            usos: {},
-            precios: [],
-            rango_precio: {},
-            alternativas: [],
-          };
-
-          results.forEach((result) => {
-            if (result.status === 'fulfilled' && result.value.data) {
-              const { name, data } = result.value;
-
-              if (name === 'suppliers') {
-                consolidatedResults.proveedores = data.proveedores || [];
-              } else if (name === 'specs') {
-                consolidatedResults.especificaciones = data.especificaciones || {};
-                consolidatedResults.usos = data.usos || {};
-              } else if (name === 'prices') {
-                consolidatedResults.precios = data.precios || [];
-                consolidatedResults.rango_precio = data.rango_precio || {};
-              } else if (name === 'alternatives') {
-                consolidatedResults.alternativas = data.alternativas || [];
-              }
-            }
-          });
-
-          // Event: All parallel searches completed
-          const successCount = results.filter(r => r.status === 'fulfilled' && r.value.data).length;
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'all_searches_complete',
-              message: `Completadas ${successCount}/${searchPromises.length} búsquedas`,
-              results: consolidatedResults,
-            }),
-          } as MessageEvent);
-
-          // Complete the stream
-          subscriber.complete();
-        } catch (error) {
-          this.logger.error(`[SSE] Internet search stream failed: ${error.message}`, error.stack);
-          subscriber.next({
-            data: JSON.stringify({
-              type: 'error',
-              message: `Error: ${error.message}`,
-            }),
-          } as MessageEvent);
-          subscriber.complete();
-        }
-      })();
-    });
-  }
+  // SECURITY: searchInternetStream() removed - was causing firewall alerts
+  // due to Google Search Grounding visiting external URLs
 
   /**
    * Get raw vectorial search results without LLM filtering
@@ -1638,37 +1495,5 @@ export class SearchService {
     }
   }
 
-  /**
-   * Generate completion message for each mini-search based on results
-   */
-  private getSearchCompletionMessage(searchName: string, result: any): string {
-    switch (searchName) {
-      case 'suppliers':
-        const supplierCount = result?.proveedores?.length || 0;
-        return supplierCount > 0
-          ? `Encontrados ${supplierCount} proveedores en Perú`
-          : 'No se encontraron proveedores';
-
-      case 'specs':
-        const hasSpecs = result?.especificaciones && Object.keys(result.especificaciones).length > 0;
-        return hasSpecs
-          ? 'Especificaciones técnicas obtenidas'
-          : 'No se encontraron especificaciones';
-
-      case 'prices':
-        const priceCount = result?.precios?.length || 0;
-        return priceCount > 0
-          ? `Encontrados ${priceCount} precios referenciales`
-          : 'No se encontraron precios';
-
-      case 'alternatives':
-        const altCount = result?.alternativas?.length || 0;
-        return altCount > 0
-          ? `Encontradas ${altCount} alternativas`
-          : 'No se encontraron alternativas';
-
-      default:
-        return 'Búsqueda completada';
-    }
-  }
+  // SECURITY: getSearchCompletionMessage() removed - was only used by searchInternetStream()
 }
