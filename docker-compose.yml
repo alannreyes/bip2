@@ -105,8 +105,13 @@ services:
       # CORS - permitir localhost, docker internal, y red 192.168.18.*
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3011,http://127.0.0.1:3011,http://frontend:3000,http://192.168.18.174:3011,http://192.168.18.97:3011}
 
+      # Security & Authentication
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_MODE: ${AUTH_MODE:-both}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+
       # JWT
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-default-dev-secret-change-in-production}
       JWT_EXPIRES_IN: 7d
 
       # Azure AD - NO CONFIGURADO
