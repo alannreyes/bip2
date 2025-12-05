@@ -1,7 +1,38 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { GeminiEmbeddingService } from '../embeddings/gemini-embedding.service';
 import { QdrantService } from '../qdrant/qdrant.service';
 import { DatasourcesService } from '../datasources/datasources.service';
+
+/**
+ * Calculate Levenshtein distance between two strings
+ * Used for fuzzy matching of brand names (stenli → STANLEY)
+ */
+function levenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
 
 /**
  * Mapeo de campos del payload - adapta nombres genéricos a los campos reales del catálogo
@@ -53,14 +84,145 @@ function inferRtiFromScore(score: number): { categoria: string; score_rti: numbe
 }
 
 @Injectable()
-export class SearchService {
+export class SearchService implements OnModuleInit {
   private readonly logger = new Logger(SearchService.name);
+
+  // Cache of known brands per collection for fuzzy matching
+  private brandCache: Map<string, Set<string>> = new Map();
+  private brandCacheExpiry: Map<string, number> = new Map();
+  private readonly BRAND_CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
   constructor(
     private readonly geminiService: GeminiEmbeddingService,
     private readonly qdrantService: QdrantService,
     private readonly datasourcesService: DatasourcesService,
   ) {}
+
+  async onModuleInit() {
+    // Pre-load brands for common collections on startup
+    this.logger.log('Pre-loading brand cache for fuzzy matching...');
+    try {
+      await this.loadBrandsForCollection('catalogo_stock');
+      await this.loadBrandsForCollection('catalogo_efc');
+    } catch (error) {
+      this.logger.warn(`Failed to pre-load brand cache: ${error.message}`);
+    }
+  }
+
+  /**
+   * Load unique brands from a collection into cache
+   */
+  private async loadBrandsForCollection(collectionName: string): Promise<Set<string>> {
+    const now = Date.now();
+    const expiry = this.brandCacheExpiry.get(collectionName);
+
+    // Return cached if not expired
+    if (expiry && expiry > now && this.brandCache.has(collectionName)) {
+      return this.brandCache.get(collectionName)!;
+    }
+
+    try {
+      // Scroll through collection to get unique brands
+      const brands = new Set<string>();
+      let offset: string | null = null;
+      const batchSize = 1000;
+      let totalPoints = 0;
+
+      do {
+        const response = await this.qdrantService.scroll(
+          collectionName,
+          batchSize,
+          offset,
+          { include: ['Marca_Descripcion'] }
+        );
+
+        for (const point of response.points) {
+          const marca = point.payload?.Marca_Descripcion;
+          if (marca && typeof marca === 'string' && marca.trim()) {
+            brands.add(marca.trim().toUpperCase());
+          }
+        }
+
+        totalPoints += response.points.length;
+        offset = response.next_page_offset;
+      } while (offset);
+
+      this.brandCache.set(collectionName, brands);
+      this.brandCacheExpiry.set(collectionName, now + this.BRAND_CACHE_TTL);
+
+      this.logger.log(`Loaded ${brands.size} unique brands from ${collectionName} (${totalPoints} points scanned)`);
+      return brands;
+    } catch (error) {
+      this.logger.error(`Failed to load brands from ${collectionName}: ${error.message}`);
+      return new Set();
+    }
+  }
+
+  /**
+   * Find the closest matching brand using fuzzy matching (Levenshtein distance)
+   * Returns the corrected brand name if a close match is found, otherwise returns the original
+   *
+   * @param inputBrand - The brand name to match (e.g., "stenli", "stanly")
+   * @param collectionName - The collection to search brands in
+   * @returns Object with corrected brand and whether it was auto-corrected
+   */
+  private async fuzzyMatchBrand(
+    inputBrand: string,
+    collectionName: string
+  ): Promise<{ brand: string; corrected: boolean; originalInput: string; similarity: number }> {
+    const normalizedInput = inputBrand.toUpperCase().trim();
+    const brands = await this.loadBrandsForCollection(collectionName);
+
+    // If exact match exists, return it
+    if (brands.has(normalizedInput)) {
+      return { brand: normalizedInput, corrected: false, originalInput: inputBrand, similarity: 1.0 };
+    }
+
+    // Find closest match using Levenshtein distance
+    let bestMatch = normalizedInput;
+    let bestDistance = Infinity;
+    let bestSimilarity = 0;
+
+    for (const knownBrand of brands) {
+      const distance = levenshteinDistance(normalizedInput, knownBrand);
+
+      // Calculate similarity as percentage (1 - distance/maxLength)
+      const maxLen = Math.max(normalizedInput.length, knownBrand.length);
+      const similarity = 1 - (distance / maxLen);
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestMatch = knownBrand;
+        bestSimilarity = similarity;
+      }
+    }
+
+    // Auto-correct if:
+    // 1. Distance is <= 2 characters for short brands (allows "bosh" → "BOSCH")
+    // 2. Distance is <= 3 for longer brands (allows "stenli" → "STANLEY")
+    // 3. OR similarity is >= 55% (allows phonetic typos like stenli/stanley)
+    // 4. The match must have at least 50% similarity to avoid wild corrections
+    const maxAllowedDistance = normalizedInput.length <= 5 ? 2 : 3;
+    const shouldCorrect = (
+      (bestDistance <= maxAllowedDistance && bestSimilarity >= 0.50) ||
+      (bestSimilarity >= 0.55 && normalizedInput.length >= 4)
+    );
+
+    if (shouldCorrect && bestMatch !== normalizedInput) {
+      this.logger.log(
+        `🔧 Brand fuzzy match: "${inputBrand}" → "${bestMatch}" ` +
+        `(distance: ${bestDistance}, similarity: ${(bestSimilarity * 100).toFixed(0)}%)`
+      );
+      return { brand: bestMatch, corrected: true, originalInput: inputBrand, similarity: bestSimilarity };
+    }
+
+    // No good match found, return original (will trigger fallback later)
+    this.logger.debug(
+      `No fuzzy match for "${inputBrand}": best="${bestMatch}", ` +
+      `distance=${bestDistance}, similarity=${(bestSimilarity * 100).toFixed(0)}%`
+    );
+    return { brand: normalizedInput, corrected: false, originalInput: inputBrand, similarity: bestSimilarity };
+  }
 
   async searchByText(
     query: string,
@@ -88,21 +250,39 @@ export class SearchService {
     const startTime = Date.now();
 
     try {
-      // Step 1: Convert marca parameter to payload filter for hard filtering
-      if (marca && (!payloadFilters || !payloadFilters['marca'])) {
+      // Step 1: Normalize and fuzzy-match marca for case-insensitive and typo-tolerant matching
+      // The database stores brands in uppercase (STANLEY, TRUPER, etc.)
+      // Fuzzy matching handles typos like "stenli" → "STANLEY", "trupper" → "TRUPER"
+      let normalizedMarca: string | undefined;
+      let marcaCorrected = false;
+      let marcaOriginalInput: string | undefined;
+
+      if (marca) {
+        const fuzzyResult = await this.fuzzyMatchBrand(marca, collectionName);
+        normalizedMarca = fuzzyResult.brand;
+        marcaCorrected = fuzzyResult.corrected;
+        marcaOriginalInput = fuzzyResult.originalInput;
+
+        if (marcaCorrected) {
+          this.logger.log(`Brand auto-corrected: "${marcaOriginalInput}" → "${normalizedMarca}"`);
+        }
+      }
+
+      // Step 1b: Convert marca parameter to payload filter for hard filtering
+      if (normalizedMarca && (!payloadFilters || !payloadFilters['marca'])) {
         payloadFilters = payloadFilters || {};
-        payloadFilters['marca'] = marca;
-        this.logger.log(`Converting marca parameter to payload filter: ${marca}`);
+        payloadFilters['marca'] = normalizedMarca;
+        this.logger.log(`Converting marca parameter to payload filter: ${normalizedMarca}${marcaCorrected ? ` (corrected from: ${marcaOriginalInput})` : ` (original: ${marca})`}`);
       }
 
       // Step 2: Extract keywords from query for attention mechanism
       let enhancedQuery = query;
       const keywords = this.extractKeywords(query);
 
-      if (marca) {
-        enhancedQuery = `${query} ${marca}`;
-        keywords.brands = [marca.toLowerCase()];
-        this.logger.log(`Brand filter applied: ${marca}, enhanced query: "${enhancedQuery}"`);
+      if (normalizedMarca) {
+        enhancedQuery = `${query} ${normalizedMarca}`;
+        keywords.brands = [normalizedMarca.toLowerCase()];
+        this.logger.log(`Brand filter applied: ${normalizedMarca}, enhanced query: "${enhancedQuery}"`);
       }
 
       this.logger.debug(
@@ -134,10 +314,10 @@ export class SearchService {
       const FILTER_MULTIPLIER = 10;
       let searchLimit: number;
 
-      if (marca || cliente) {
+      if (normalizedMarca || cliente) {
         // Expand search when filters are active
         searchLimit = limit * FILTER_MULTIPLIER;
-        const activeFilters = [marca ? 'marca' : null, cliente ? 'cliente' : null].filter(Boolean).join(' + ');
+        const activeFilters = [normalizedMarca ? 'marca' : null, cliente ? 'cliente' : null].filter(Boolean).join(' + ');
         this.logger.log(`Filter active (${activeFilters}), expanding search to ${searchLimit} results`);
       } else if (useLLMFilter) {
         // LLM mode: fetch 2x for better reranking
@@ -168,13 +348,13 @@ export class SearchService {
       let marcaFallbackReason = '';
       const bestMarcaScore = searchResults.length > 0 ? searchResults[0].score : 0;
       const shouldFallback = searchResults.length === 0 ||
-        (marca && bestMarcaScore < MARCA_FALLBACK_THRESHOLD);
+        (normalizedMarca && bestMarcaScore < MARCA_FALLBACK_THRESHOLD);
 
-      if (shouldFallback && marca && qdrantFilter) {
+      if (shouldFallback && normalizedMarca && qdrantFilter) {
         marcaFallbackReason = searchResults.length === 0
-          ? `No se encontraron productos de marca "${marca}" para esta búsqueda. Mostrando resultados de otras marcas.`
-          : `Los productos de marca "${marca}" tienen baja similitud (${(bestMarcaScore * 100).toFixed(0)}%). Mostrando resultados de otras marcas (priorizando "${marca}" en similitud).`;
-        this.logger.warn(`Marca filter "${marca}" - ${marcaFallbackReason} - applying HYBRID FALLBACK`);
+          ? `No se encontraron productos de marca "${normalizedMarca}" para esta búsqueda. Mostrando resultados de otras marcas.`
+          : `Los productos de marca "${normalizedMarca}" tienen baja similitud (${(bestMarcaScore * 100).toFixed(0)}%). Mostrando resultados de otras marcas (priorizando "${normalizedMarca}" en similitud).`;
+        this.logger.warn(`Marca filter "${normalizedMarca}" - ${marcaFallbackReason} - applying HYBRID FALLBACK`);
 
         // Remove marca from payload filters for fallback search
         const fallbackPayloadFilters = { ...payloadFilters };
@@ -189,7 +369,7 @@ export class SearchService {
         searchResults = await this.qdrantService.search(collectionName, embedding, searchLimit, fallbackQdrantFilter);
         marcaFallbackApplied = true;
 
-        this.logger.log(`HYBRID FALLBACK: Found ${searchResults.length} results without strict marca filter (marca "${marca}" still in embedding for prioritization)`);
+        this.logger.log(`HYBRID FALLBACK: Found ${searchResults.length} results without strict marca filter (marca "${normalizedMarca}" still in embedding for prioritization)`);
       }
 
       // Step 8: NO BOOST - Trust Qdrant's vectorial scores directly
@@ -392,7 +572,12 @@ export class SearchService {
 
       return {
         query,
-        marca,
+        marca: normalizedMarca || marca, // Return the corrected/normalized marca
+        ...(marcaCorrected && {
+          marca_original: marcaOriginalInput,
+          marca_autocorrected: true,
+          marca_autocorrect_message: `Marca corregida automáticamente: "${marcaOriginalInput}" → "${normalizedMarca}"`,
+        }),
         cliente,
         duration: `${duration}ms`,
         // Indicate if hybrid fallback was applied (marca filter relaxed)
@@ -1286,6 +1471,10 @@ export class SearchService {
     const collectionStats: any[] = [];
     let marcaFallbackApplied = false;
     let marcaFallbackMessage = '';
+    let marcaAutocorrected = false;
+    let marcaOriginal = '';
+    let marcaCorrectedTo = '';
+    let marcaAutocorrectMessage = '';
 
     try {
       // Search in each collection in parallel
@@ -1293,6 +1482,14 @@ export class SearchService {
         try {
           this.logger.debug(`Searching in collection: ${collectionName}`);
           const result = await this.searchByText(query, collectionName, limit, marca, cliente, useLLMFilter, payloadFilters, effectiveMinRelevancia);
+
+          // Capture marca autocorrection status (use first autocorrection)
+          if (result.marca_autocorrected && !marcaAutocorrected) {
+            marcaAutocorrected = true;
+            marcaOriginal = result.marca_original;
+            marcaCorrectedTo = result.marca;
+            marcaAutocorrectMessage = result.marca_autocorrect_message;
+          }
 
           // Capture marca fallback status from any collection (use first fallback message)
           if (result.marca_fallback && !marcaFallbackApplied) {
@@ -1359,7 +1556,12 @@ export class SearchService {
 
       return {
         query,
-        marca,
+        marca: marcaAutocorrected ? marcaCorrectedTo : marca, // Return corrected marca
+        ...(marcaAutocorrected && {
+          marca_original: marcaOriginal,
+          marca_autocorrected: true,
+          marca_autocorrect_message: marcaAutocorrectMessage,
+        }),
         cliente,
         collections: collectionNames,
         minRelevancia: effectiveMinRelevancia,

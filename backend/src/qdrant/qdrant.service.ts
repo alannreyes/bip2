@@ -455,4 +455,41 @@ export class QdrantService {
   getClient(): QdrantClient {
     return this.client;
   }
+
+  /**
+   * Scroll through all points in a collection with pagination
+   * Used for loading brand lists, data exports, etc.
+   *
+   * @param collectionName - The collection to scroll through
+   * @param limit - Number of points per page
+   * @param offset - Point ID to start from (null for first page)
+   * @param withPayload - Payload fields to include (true for all, or {include: [...]} for specific fields)
+   */
+  async scroll(
+    collectionName: string,
+    limit: number = 1000,
+    offset: string | null = null,
+    withPayload: boolean | { include: string[] } = true,
+    qdrantHost?: string,
+    qdrantPort?: number,
+  ): Promise<{ points: any[]; next_page_offset: string | null }> {
+    try {
+      const client = this.getClientForDatasource(qdrantHost, qdrantPort);
+
+      const result = await client.scroll(collectionName, {
+        limit,
+        offset: offset || undefined,
+        with_payload: withPayload,
+        with_vector: false, // We don't need vectors for brand loading
+      });
+
+      return {
+        points: result.points || [],
+        next_page_offset: result.next_page_offset || null,
+      };
+    } catch (error) {
+      this.logger.error(`Scroll failed in ${collectionName}: ${error.message}`);
+      throw new BadRequestException(`Scroll failed: ${error.message}`);
+    }
+  }
 }
