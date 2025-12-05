@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 // Modules
 import { CommonModule } from './common/common.module';
@@ -59,6 +61,27 @@ import { PromptsModule } from './prompts/prompts.module';
     // Schedule (Cron jobs)
     ScheduleModule.forRoot(),
 
+    // Rate Limiting - Protección contra abusos
+    // 100 requests por minuto por IP (general)
+    // Endpoints específicos pueden tener límites más estrictos
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000,      // 1 segundo
+        limit: 10,      // 10 requests por segundo máximo
+      },
+      {
+        name: 'medium',
+        ttl: 60000,     // 1 minuto
+        limit: 100,     // 100 requests por minuto
+      },
+      {
+        name: 'long',
+        ttl: 3600000,   // 1 hora
+        limit: 1000,    // 1000 requests por hora
+      },
+    ]),
+
     // Common services (global)
     CommonModule,
 
@@ -74,6 +97,13 @@ import { PromptsModule } from './prompts/prompts.module';
     DuplicatesModule,
     AuthModule,
     PromptsModule,
+  ],
+  providers: [
+    // Aplicar Rate Limiting globalmente
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

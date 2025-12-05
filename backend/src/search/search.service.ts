@@ -1557,20 +1557,20 @@ export class SearchService implements OnModuleInit {
       return {
         query,
         marca: marcaAutocorrected ? marcaCorrectedTo : marca, // Return corrected marca
-        ...(marcaAutocorrected && {
+        ...(marcaAutocorrected ? {
           marca_original: marcaOriginal,
-          marca_autocorrected: true,
+          marca_autocorrected: true as const,
           marca_autocorrect_message: marcaAutocorrectMessage,
-        }),
+        } : {}),
         cliente,
         collections: collectionNames,
         minRelevancia: effectiveMinRelevancia,
         minRelevancia_auto: minRelevancia === undefined,
         // Indicate if hybrid fallback was applied (marca filter relaxed due to 0 results)
-        ...(marcaFallbackApplied && {
-          marca_fallback: true,
+        ...(marcaFallbackApplied ? {
+          marca_fallback: true as const,
           marca_fallback_message: marcaFallbackMessage,
-        }),
+        } : {}),
         duration: `${duration}ms`,
         total_results: allResults.length,
         filtered_by_relevancia: filteredCount,

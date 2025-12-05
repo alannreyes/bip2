@@ -485,7 +485,7 @@ export class QdrantService {
 
       return {
         points: result.points || [],
-        next_page_offset: result.next_page_offset || null,
+        next_page_offset: (result.next_page_offset as string | null) || null,
       };
     } catch (error) {
       this.logger.error(`Scroll failed in ${collectionName}: ${error.message}`);
