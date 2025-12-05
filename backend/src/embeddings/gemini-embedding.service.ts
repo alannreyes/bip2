@@ -638,7 +638,38 @@ Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
   }
 ]`;
 
-        const result = await model.generateContent(prompt);
+        // Retry with exponential backoff for rate limiting
+        let result;
+        let retryCount = 0;
+        const maxRetries = 3;
+        const baseDelay = 1000; // 1 second
+
+        while (retryCount <= maxRetries) {
+          try {
+            result = await model.generateContent(prompt);
+            break; // Success, exit retry loop
+          } catch (retryError) {
+            const isRateLimited = retryError.message?.includes('429') ||
+                                  retryError.message?.includes('quota') ||
+                                  retryError.message?.includes('rate');
+
+            if (isRateLimited && retryCount < maxRetries) {
+              retryCount++;
+              // Exponential backoff: 1s, 2s, 4s + jitter (0-500ms)
+              const delay = (baseDelay * Math.pow(2, retryCount - 1)) + Math.random() * 500;
+              this.logger.warn(`Gemini rate limited, retry ${retryCount}/${maxRetries} in ${Math.round(delay)}ms`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+              // Not rate limited or max retries reached
+              throw retryError;
+            }
+          }
+        }
+
+        if (!result) {
+          throw new Error('Failed to get response from Gemini after retries');
+        }
+
         const response = result.response;
         const text = response.text().trim();
 
@@ -687,15 +718,21 @@ Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
       return results;
     } catch (error) {
       this.logger.error(`Failed to filter search results: ${error.message}`);
-      // On error, return all products as potential matches with low confidence
+      // On error, return products with their original vectorial scores as RTI scores
+      // This allows searches to still return results when LLM is unavailable
+      const isRateLimited = error.message?.includes('429') || error.message?.includes('quota');
+      const reason = isRateLimited
+        ? 'LLM no disponible (rate limit) - usando score vectorial'
+        : `Error en filtrado RTI: ${error.message}`;
+
       return products.map(p => ({
         id: p.id,
-        match: true, // Default to true on error to avoid hiding results
-        confidence: 0.50,
-        score_rti: 0.50, // MISMA_CATEGORIA - assume relevance on error
-        categoria_rti: 'MISMA_CATEGORIA',
-        reason: `Error en filtrado RTI: ${error.message}`,
-        adjustedScore: p.score * 0.5,
+        match: p.score >= 0.65, // Use vectorial threshold
+        confidence: p.score,
+        score_rti: p.score, // Use original vectorial score instead of 0.50
+        categoria_rti: 'FALLBACK_VECTORIAL',
+        reason,
+        adjustedScore: p.score, // Keep original score
       }));
     }
   }
