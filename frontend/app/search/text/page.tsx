@@ -6,7 +6,7 @@ import { useCollections } from '@/hooks/use-collections';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
-import { Search, Database, Loader2, Code } from 'lucide-react';
+import { Search, Database, Loader2, Code, Copy, Check } from 'lucide-react';
 import { searchApi } from '@/lib/api';
 
 interface SearchResult {
@@ -50,6 +50,32 @@ export default function TextSearchPage() {
   const [requestJson, setRequestJson] = useState<string>('');
   const [responseJson, setResponseJson] = useState<string>('');
   const [showJsonPanel, setShowJsonPanel] = useState<boolean>(true);
+  const [copiedPanel, setCopiedPanel] = useState<string | null>(null);
+
+  // Copy to clipboard function
+  const copyToClipboard = async (text: string, panelName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedPanel(panelName);
+      setTimeout(() => setCopiedPanel(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  // Generate dynamic cURL command
+  const generateCurlCommand = () => {
+    if (!requestJson) return '# Ejecuta una búsqueda para ver el comando cURL';
+
+    const apiUrl = typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.hostname}:3001/api/search/text`
+      : 'http://localhost:3001/api/search/text';
+
+    return `curl -X POST \\
+  "${apiUrl}" \\
+  -H "Content-Type: application/json" \\
+  -d '${requestJson.replace(/\n/g, '').replace(/\s+/g, ' ')}'`;
+  };
 
   // Toggle individual collection
   const toggleCollection = (collectionName: string) => {
@@ -518,8 +544,17 @@ export default function TextSearchPage() {
             {showJsonPanel && (
               <div className="space-y-4">
                 {/* Request JSON */}
-                <div className="bg-white rounded-lg shadow p-4">
-                  <h2 className="text-sm font-bold mb-1">Request JSON</h2>
+                <div
+                  className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow group"
+                  onClick={() => requestJson && copyToClipboard(requestJson, 'request')}
+                  title="Click para copiar"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <h2 className="text-sm font-bold">Request JSON</h2>
+                    <span className={`text-xs flex items-center gap-1 ${copiedPanel === 'request' ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                      {copiedPanel === 'request' ? <><Check className="h-3 w-3" /> Copiado!</> : <><Copy className="h-3 w-3" /> Click para copiar</>}
+                    </span>
+                  </div>
                   <p className="text-xs text-gray-500 mb-2">POST /api/search/text</p>
                   <pre className="bg-gray-900 text-green-400 p-3 rounded text-xs overflow-x-auto max-h-48 overflow-y-auto">
                     {requestJson || '// Request aparecerá aquí'}
@@ -527,8 +562,17 @@ export default function TextSearchPage() {
                 </div>
 
                 {/* Response JSON */}
-                <div className="bg-white rounded-lg shadow p-4">
-                  <h2 className="text-sm font-bold mb-1">Response JSON</h2>
+                <div
+                  className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow group"
+                  onClick={() => responseJson && copyToClipboard(responseJson, 'response')}
+                  title="Click para copiar"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <h2 className="text-sm font-bold">Response JSON</h2>
+                    <span className={`text-xs flex items-center gap-1 ${copiedPanel === 'response' ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                      {copiedPanel === 'response' ? <><Check className="h-3 w-3" /> Copiado!</> : <><Copy className="h-3 w-3" /> Click para copiar</>}
+                    </span>
+                  </div>
                   <p className="text-xs text-gray-500 mb-2">
                     {searchDuration || 'Esperando...'}
                   </p>
@@ -537,20 +581,20 @@ export default function TextSearchPage() {
                   </pre>
                 </div>
 
-                {/* cURL example */}
-                <div className="bg-white rounded-lg shadow p-4">
-                  <h2 className="text-sm font-bold mb-2">cURL Ejemplo</h2>
-                  <pre className="bg-gray-800 text-gray-300 p-3 rounded text-xs overflow-x-auto">
-{`curl -X POST \\
-  http://localhost:3001/api/search/text \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "query": "LLAVE MIXTA 13MM",
-    "collections": ["catalogo_stock"],
-    "limit": 3,
-    "useLLMFilter": false
-  }'
-# minRelevancia: auto (0.70 sin LLM, 0.65 con LLM)`}
+                {/* cURL example - Dynamic */}
+                <div
+                  className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow group"
+                  onClick={() => copyToClipboard(generateCurlCommand(), 'curl')}
+                  title="Click para copiar"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <h2 className="text-sm font-bold">cURL Ejemplo</h2>
+                    <span className={`text-xs flex items-center gap-1 ${copiedPanel === 'curl' ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                      {copiedPanel === 'curl' ? <><Check className="h-3 w-3" /> Copiado!</> : <><Copy className="h-3 w-3" /> Click para copiar</>}
+                    </span>
+                  </div>
+                  <pre className="bg-gray-800 text-gray-300 p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap">
+                    {generateCurlCommand()}
                   </pre>
                 </div>
               </div>
