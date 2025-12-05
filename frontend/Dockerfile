@@ -7,9 +7,10 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 # NO establecer NODE_ENV aquí - npm instalará devDependencies automáticamente
 
-# Instalar dependencias
-COPY package*.json ./
-RUN npm install --legacy-peer-deps
+# Instalar dependencias (versiones parcheadas para CVE-2025-55182/66478)
+COPY package.json ./
+RUN npm config set registry https://registry.npmjs.org && \
+    npm install --legacy-peer-deps
 
 # Copiar código
 COPY . .
