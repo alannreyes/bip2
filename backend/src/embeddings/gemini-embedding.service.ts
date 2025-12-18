@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
 @Injectable()
 export class GeminiEmbeddingService {
@@ -10,6 +11,10 @@ export class GeminiEmbeddingService {
   private readonly embeddingModel: string = 'gemini-embedding-001';
   private readonly visionModel: string = 'gemini-2.0-flash-exp';
 
+  // OpenAI client for RTI filter (faster than Gemini)
+  private readonly openaiClient: OpenAI | null = null;
+  private readonly openaiModel: string = 'gpt-4o';
+
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get('GEMINI_API_KEY');
     if (!this.apiKey) {
@@ -17,6 +22,15 @@ export class GeminiEmbeddingService {
     }
     this.genAI = new GoogleGenerativeAI(this.apiKey);
     this.logger.log('Gemini AI initialized with gemini-embedding-001 (3072 dims)');
+
+    // Initialize OpenAI client for RTI filter
+    const openaiApiKey = this.configService.get('OPENAI_API_KEY');
+    if (openaiApiKey) {
+      this.openaiClient = new OpenAI({ apiKey: openaiApiKey });
+      this.logger.log('OpenAI initialized with gpt-4o for RTI filter');
+    } else {
+      this.logger.warn('OPENAI_API_KEY not configured - RTI filter will use Gemini (slower)');
+    }
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
@@ -569,6 +583,7 @@ Responde SOLO con JSON válido (sin markdown):
   /**
    * Filter search results semantically using LLM to ensure relevance
    * Evaluates each product to determine if it matches the user's search intent
+   * Uses OpenAI GPT-4o for faster response times (Gemini as fallback)
    */
   async filterSearchResults(
     query: string,
@@ -578,8 +593,6 @@ Responde SOLO con JSON válido (sin markdown):
       if (products.length === 0) {
         return [];
       }
-
-      const model = this.genAI.getGenerativeModel({ model: this.visionModel });
 
       // Process in batches to avoid token limits
       const batchSize = 10;
@@ -633,45 +646,89 @@ Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
   {
     "id": "id del producto",
     "score_rti": número (0.00, 0.10, 0.30, 0.50, 0.70, 0.85, 0.95, o 1.00),
-    "categoria": "EXACTO|EQUIVALENTE|SUSTITUTO_PERFECTO|SUSTITUTO_VALIDO|MISMA_CATEGORIA|RELACIONADO|IRRELEVANTE|RECHAZADO",
+    "categoria": "EXACTO|EQUIVALENTE|SUSTITUTO_PERFECTO|SUSTITUTO_VALIDO|MISMA_CATEGORIA|}RELACIONADO|IRRELEVANTE|RECHAZADO",
     "reason": "breve explicación (máx 15 palabras)"
   }
 ]`;
 
-        // Retry with exponential backoff for rate limiting
-        let result;
-        let retryCount = 0;
-        const maxRetries = 3;
-        const baseDelay = 1000; // 1 second
+        // Use OpenAI GPT-4o if available (faster), otherwise fall back to Gemini
+        let text: string;
 
-        while (retryCount <= maxRetries) {
-          try {
-            result = await model.generateContent(prompt);
-            break; // Success, exit retry loop
-          } catch (retryError) {
-            const isRateLimited = retryError.message?.includes('429') ||
-                                  retryError.message?.includes('quota') ||
-                                  retryError.message?.includes('rate');
+        if (this.openaiClient) {
+          // OpenAI GPT-4o path (preferred - faster)
+          let retryCount = 0;
+          const maxRetries = 3;
+          const baseDelay = 1000;
 
-            if (isRateLimited && retryCount < maxRetries) {
-              retryCount++;
-              // Exponential backoff: 1s, 2s, 4s + jitter (0-500ms)
-              const delay = (baseDelay * Math.pow(2, retryCount - 1)) + Math.random() * 500;
-              this.logger.warn(`Gemini rate limited, retry ${retryCount}/${maxRetries} in ${Math.round(delay)}ms`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-            } else {
-              // Not rate limited or max retries reached
-              throw retryError;
+          while (retryCount <= maxRetries) {
+            try {
+              const completion = await this.openaiClient.chat.completions.create({
+                model: this.openaiModel,
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'Eres un experto en productos industriales y ferretería. Respondes SOLO con JSON válido, sin markdown ni comentarios.',
+                  },
+                  {
+                    role: 'user',
+                    content: prompt,
+                  },
+                ],
+                temperature: 0.1, // Low temperature for consistent results
+                max_tokens: 2000,
+              });
+
+              text = completion.choices[0]?.message?.content?.trim() || '';
+              break; // Success
+            } catch (retryError: any) {
+              const isRateLimited = retryError.status === 429 ||
+                                    retryError.message?.includes('rate') ||
+                                    retryError.message?.includes('quota');
+
+              if (isRateLimited && retryCount < maxRetries) {
+                retryCount++;
+                const delay = (baseDelay * Math.pow(2, retryCount - 1)) + Math.random() * 500;
+                this.logger.warn(`OpenAI rate limited, retry ${retryCount}/${maxRetries} in ${Math.round(delay)}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              } else {
+                throw retryError;
+              }
             }
           }
-        }
+        } else {
+          // Gemini fallback path (slower but works without OpenAI key)
+          const model = this.genAI.getGenerativeModel({ model: this.visionModel });
+          let retryCount = 0;
+          const maxRetries = 3;
+          const baseDelay = 1000;
 
-        if (!result) {
-          throw new Error('Failed to get response from Gemini after retries');
-        }
+          let result;
+          while (retryCount <= maxRetries) {
+            try {
+              result = await model.generateContent(prompt);
+              break;
+            } catch (retryError: any) {
+              const isRateLimited = retryError.message?.includes('429') ||
+                                    retryError.message?.includes('quota') ||
+                                    retryError.message?.includes('rate');
 
-        const response = result.response;
-        const text = response.text().trim();
+              if (isRateLimited && retryCount < maxRetries) {
+                retryCount++;
+                const delay = (baseDelay * Math.pow(2, retryCount - 1)) + Math.random() * 500;
+                this.logger.warn(`Gemini rate limited, retry ${retryCount}/${maxRetries} in ${Math.round(delay)}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              } else {
+                throw retryError;
+              }
+            }
+          }
+
+          if (!result) {
+            throw new Error('Failed to get response from Gemini after retries');
+          }
+
+          text = result.response.text().trim();
+        }
 
         // Remove markdown code blocks if present
         const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -708,13 +765,15 @@ Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
           });
         }
 
-        // Add delay between batches to avoid rate limiting
+        // Add delay between batches to avoid rate limiting (shorter for OpenAI)
         if (i + batchSize < products.length) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
+          const delayMs = this.openaiClient ? 100 : 300; // OpenAI is faster, less delay needed
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
       }
 
-      this.logger.log(`LLM filtered ${products.length} products: ${results.filter(r => r.match).length} matches`);
+      const provider = this.openaiClient ? 'OpenAI GPT-4o' : 'Gemini';
+      this.logger.log(`[${provider}] RTI filtered ${products.length} products: ${results.filter(r => r.match).length} matches`);
       return results;
     } catch (error) {
       this.logger.error(`Failed to filter search results: ${error.message}`);

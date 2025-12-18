@@ -98,9 +98,12 @@ services:
       QDRANT_PORT: ${QDRANT_PORT:-6333}
       QDRANT_API_KEY: dev-key-12345
 
-      # Gemini API
+      # Gemini API (embeddings)
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_EMBEDDING_DELAY_MS: ${GEMINI_EMBEDDING_DELAY_MS:-600}
+
+      # OpenAI API (RTI filter - faster than Gemini)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
 
       # CORS - permitir localhost, docker internal, y red 192.168.18.*
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3011,http://127.0.0.1:3011,http://frontend:3000,http://192.168.18.174:3011,http://192.168.18.97:3011}
