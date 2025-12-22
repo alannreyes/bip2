@@ -80,6 +80,7 @@ export class DuplicatesController {
     @Body('modelo') modelo?: string,
     @Body('similarityThreshold') similarityThreshold?: number,
     @Body('dateFilter') dateFilter?: { field: string; from?: string; to?: string },
+    @Body('excludeCodes') excludeCodes?: string[],
   ) {
     if (!collection || !descripcion) {
       throw new Error('Collection and descripcion are required');
@@ -94,6 +95,7 @@ export class DuplicatesController {
       modelo,
       threshold,
       dateFilter,
+      excludeCodes,
     );
   }
 

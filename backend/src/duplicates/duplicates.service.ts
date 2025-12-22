@@ -726,6 +726,7 @@ export class DuplicatesService {
     modelo?: string,
     similarityThreshold: number = 0.90,
     dateFilter?: { field: string; from?: string; to?: string },
+    excludeCodes?: string[],
   ): Promise<{
     exists: boolean;
     isExactMatch: boolean;
@@ -768,7 +769,18 @@ export class DuplicatesService {
       );
 
       // Filter by similarity threshold (Qdrant returns score, not similarity percentage)
-      const searchResults = allResults.filter((r) => r.score >= similarityThreshold);
+      let searchResults = allResults.filter((r) => r.score >= similarityThreshold);
+
+      // Filter out excluded codes if provided
+      if (excludeCodes && excludeCodes.length > 0) {
+        const excludeSet = new Set(excludeCodes.map(code => code.trim()));
+        const beforeCount = searchResults.length;
+        searchResults = searchResults.filter((r) => {
+          const code = String(r.payload?.Articulo_Codigo || r.payload?._original_id || '');
+          return !excludeSet.has(code);
+        });
+        this.logger.log(`Excluded ${beforeCount - searchResults.length} products by code filter`);
+      }
 
       this.logger.log(`Found ${searchResults.length} similar products above threshold ${similarityThreshold} (from ${allResults.length} total)`);
 
