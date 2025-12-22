@@ -12,6 +12,7 @@ export class DuplicatesController {
     @Body('limit') limit?: number,
     @Body('useAiClassification') useAiClassification?: boolean,
     @Body('filters') filters?: Record<string, string | string[]>,
+    @Body('dateFilter') dateFilter?: { field: string; from?: string; to?: string },
   ) {
     if (!collection) {
       throw new Error('Collection name is required');
@@ -28,6 +29,7 @@ export class DuplicatesController {
       undefined, // customRules
       useAi,
       filters,
+      dateFilter,
     );
   }
 
@@ -77,6 +79,7 @@ export class DuplicatesController {
     @Body('marca') marca?: string,
     @Body('modelo') modelo?: string,
     @Body('similarityThreshold') similarityThreshold?: number,
+    @Body('dateFilter') dateFilter?: { field: string; from?: string; to?: string },
   ) {
     if (!collection || !descripcion) {
       throw new Error('Collection and descripcion are required');
@@ -90,6 +93,7 @@ export class DuplicatesController {
       marca,
       modelo,
       threshold,
+      dateFilter,
     );
   }
 

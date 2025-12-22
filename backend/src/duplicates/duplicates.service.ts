@@ -55,6 +55,7 @@ export class DuplicatesService {
     customRules?: DuplicateRulesResponseDto,
     useAiClassification: boolean = false,
     filters?: Record<string, string | string[]>,
+    dateFilter?: { field: string; from?: string; to?: string },
   ): Promise<DuplicateReport> {
     this.logger.log(
       `Detecting duplicates in ${collectionName} with threshold ${similarityThreshold}`,
@@ -80,8 +81,23 @@ export class DuplicatesService {
     const sampleSize = Math.min(1000, totalPoints);
     const client = this.qdrantService.getClient();
 
-    // Build Qdrant filter from payload filters
-    const qdrantFilter = this.buildQdrantFilter(filters);
+    // Build Qdrant filter from payload filters and date filter
+    const payloadFilter = this.buildQdrantFilter(filters);
+    const dateRangeFilter = this.buildDateRangeFilter(dateFilter);
+
+    // Combine filters if both exist
+    let qdrantFilter: any = undefined;
+    if (payloadFilter && dateRangeFilter) {
+      qdrantFilter = {
+        must: [...(payloadFilter.must || []), ...(dateRangeFilter.must || [])],
+      };
+    } else {
+      qdrantFilter = payloadFilter || dateRangeFilter;
+    }
+
+    if (dateFilter) {
+      this.logger.log(`Applying date filter: ${dateFilter.field} from ${dateFilter.from} to ${dateFilter.to}`);
+    }
 
     // Scroll through products to get a sample
     const scrollResult = await client.scroll(collectionName, {
@@ -669,6 +685,36 @@ export class DuplicatesService {
   }
 
   /**
+   * Build a Qdrant date range filter
+   */
+  private buildDateRangeFilter(dateFilter?: { field: string; from?: string; to?: string }): any {
+    if (!dateFilter || !dateFilter.field) {
+      return undefined;
+    }
+
+    const range: any = {};
+    if (dateFilter.from) {
+      range.gte = dateFilter.from;
+    }
+    if (dateFilter.to) {
+      range.lte = dateFilter.to;
+    }
+
+    if (Object.keys(range).length === 0) {
+      return undefined;
+    }
+
+    return {
+      must: [
+        {
+          key: dateFilter.field,
+          range,
+        },
+      ],
+    };
+  }
+
+  /**
    * Validate if a product already exists in the database
    * Uses semantic search + AI to detect exact matches and variants
    * Returns EFC codes and formatted descriptions for user display
@@ -679,6 +725,7 @@ export class DuplicatesService {
     marca?: string,
     modelo?: string,
     similarityThreshold: number = 0.90,
+    dateFilter?: { field: string; from?: string; to?: string },
   ): Promise<{
     exists: boolean;
     isExactMatch: boolean;
@@ -706,12 +753,18 @@ export class DuplicatesService {
       // Step 1: Generate embedding for the product description
       const embedding = await this.geminiService.generateEmbedding(descripcion);
 
-      // Step 2: Search for similar products in Qdrant
+      // Step 2: Build date filter if provided
+      const filter = this.buildDateRangeFilter(dateFilter);
+      if (filter) {
+        this.logger.log(`Applying date filter: ${JSON.stringify(filter)}`);
+      }
+
+      // Step 3: Search for similar products in Qdrant
       const allResults = await this.qdrantService.search(
         collectionName,
         embedding,
         50, // Get more results to filter by threshold
-        undefined, // No filter
+        filter, // Apply date filter if provided
       );
 
       // Filter by similarity threshold (Qdrant returns score, not similarity percentage)
