@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
+import { TokenUsage, estimateTokens } from '../common/cost-tracking';
 
 @Injectable()
 export class GeminiEmbeddingService {
@@ -104,6 +105,31 @@ export class GeminiEmbeddingService {
       this.logger.error(`Failed to generate embedding: ${error.message}`);
       throw new Error(`Gemini embedding failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Generate embedding with token usage tracking
+   * Returns both the embedding vector and token usage information
+   */
+  async generateEmbeddingWithTracking(text: string): Promise<{
+    embedding: number[];
+    usage: TokenUsage;
+  }> {
+    const embedding = await this.generateEmbedding(text);
+
+    // Estimate tokens from input text
+    // Gemini embedding only has input tokens (no output)
+    const inputTokens = estimateTokens(text);
+
+    return {
+      embedding,
+      usage: {
+        model: this.embeddingModel,
+        inputTokens,
+        outputTokens: 0,
+        totalTokens: inputTokens,
+      },
+    };
   }
 
   async generateBatchEmbeddings(texts: string[]): Promise<number[][]> {
@@ -793,6 +819,239 @@ Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
         reason,
         adjustedScore: p.score, // Keep original score
       }));
+    }
+  }
+
+  /**
+   * Filter search results with token usage tracking
+   * Same as filterSearchResults but returns usage information for cost tracking
+   */
+  async filterSearchResultsWithTracking(
+    query: string,
+    products: Array<{ id: string; descripcion: string; marca?: string; categoria?: string; codigo?: string; score: number }>,
+  ): Promise<{
+    results: Array<{ id: string; match: boolean; confidence: number; score_rti: number; categoria_rti: string; reason: string; adjustedScore: number }>;
+    usage: TokenUsage;
+  }> {
+    // Track total tokens across batches
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    const model = this.openaiClient ? this.openaiModel : this.visionModel;
+
+    try {
+      if (products.length === 0) {
+        return {
+          results: [],
+          usage: { model, inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        };
+      }
+
+      // Process in batches to avoid token limits
+      const batchSize = 10;
+      const results = [];
+
+      for (let i = 0; i < products.length; i += batchSize) {
+        const batch = products.slice(i, i + batchSize);
+
+        const productsText = batch.map((p, idx) =>
+          `PRODUCTO ${idx + 1}:
+ID: ${p.id}
+Descripción: ${p.descripcion}${p.marca ? `\nMarca: ${p.marca}` : ''}${p.categoria ? `\nCategoría: ${p.categoria}` : ''}
+Score original: ${p.score.toFixed(3)}`
+        ).join('\n\n');
+
+        const prompt = `Eres un experto en RELEVANCIA TÉCNICA INDUSTRIAL (RTI). Evalúa cada producto según qué tan útil sería para un cliente que busca: "${query}"
+
+PRODUCTOS A EVALUAR:
+${productsText}
+
+ESCALA RTI (Relevancia Técnica Industrial) - 8 NIVELES:
+
+| Score | Categoría         | Descripción                                      | Ejemplo                                           |
+|-------|-------------------|--------------------------------------------------|---------------------------------------------------|
+| 1.00  | EXACTO            | Producto idéntico (mismo SKU/modelo)             | Query "LLAVE MIXTA 13MM STANLEY" → "LLAVE MIXTA 13MM STANLEY 86-858" |
+| 0.95  | EQUIVALENTE       | Mismas specs, nomenclatura diferente             | Query "LLAVE MIXTA 13MM" → "LLAVE COMBINADA 13 MILIMETROS" |
+| 0.85  | SUSTITUTO_PERFECTO| Misma función/specs, diferente marca             | Query "LLAVE MIXTA 13MM STANLEY" → "LLAVE MIXTA 13MM TRUPER" |
+| 0.70  | SUSTITUTO_VALIDO  | Misma función, specs compatibles/cercanas        | Query "LLAVE MIXTA 13MM" → "LLAVE MIXTA 12MM" |
+| 0.50  | MISMA_CATEGORIA   | Mismo tipo producto, specs diferentes            | Query "LLAVE MIXTA 13MM" → "LLAVE MIXTA 24MM" |
+| 0.30  | RELACIONADO       | Complementario o accesorio                       | Query "LLAVE MIXTA 13MM" → "ORGANIZADOR DE LLAVES" |
+| 0.10  | IRRELEVANTE       | Sin relación funcional                           | Query "LLAVE MIXTA 13MM" → "PINTURA LATEX BLANCO" |
+| 0.00  | RECHAZADO         | Producto completamente diferente                 | Query "LLAVE MIXTA 13MM" → "PAPEL HIGIÉNICO" |
+
+REGLAS DE EVALUACIÓN:
+1. TIPO DE PRODUCTO: Productos del mismo tipo base suben a >=0.50
+2. ESPECIFICACIONES: Mismas specs sube a >=0.85, specs cercanas 0.70, diferentes 0.50
+3. MARCA: Si se especificó marca y no coincide, máximo 0.85 (SUSTITUTO_PERFECTO)
+4. NOMENCLATURA: "MIXTA"="COMBINADA", "MM"="MILIMETROS", 13MM=13 MILIMETROS => EQUIVALENTE (0.95)
+
+Responde SOLO con un array JSON válido (sin markdown, sin comentarios):
+[
+  {
+    "id": "id del producto",
+    "score_rti": número (0.00, 0.10, 0.30, 0.50, 0.70, 0.85, 0.95, o 1.00),
+    "categoria": "EXACTO|EQUIVALENTE|SUSTITUTO_PERFECTO|SUSTITUTO_VALIDO|MISMA_CATEGORIA|RELACIONADO|IRRELEVANTE|RECHAZADO",
+    "reason": "breve explicación (máx 15 palabras)"
+  }
+]`;
+
+        let text: string;
+
+        if (this.openaiClient) {
+          // OpenAI GPT-4o path - capture usage from response
+          let retryCount = 0;
+          const maxRetries = 3;
+          const baseDelay = 1000;
+
+          while (retryCount <= maxRetries) {
+            try {
+              const completion = await this.openaiClient.chat.completions.create({
+                model: this.openaiModel,
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'Eres un experto en productos industriales y ferretería. Respondes SOLO con JSON válido, sin markdown ni comentarios.',
+                  },
+                  {
+                    role: 'user',
+                    content: prompt,
+                  },
+                ],
+                temperature: 0.1,
+                max_tokens: 2000,
+              });
+
+              text = completion.choices[0]?.message?.content?.trim() || '';
+
+              // Capture token usage from OpenAI response
+              if (completion.usage) {
+                totalInputTokens += completion.usage.prompt_tokens || 0;
+                totalOutputTokens += completion.usage.completion_tokens || 0;
+              }
+
+              break;
+            } catch (retryError: any) {
+              const isRateLimited = retryError.status === 429 ||
+                                    retryError.message?.includes('rate') ||
+                                    retryError.message?.includes('quota');
+
+              if (isRateLimited && retryCount < maxRetries) {
+                retryCount++;
+                const delay = (baseDelay * Math.pow(2, retryCount - 1)) + Math.random() * 500;
+                this.logger.warn(`OpenAI rate limited, retry ${retryCount}/${maxRetries} in ${Math.round(delay)}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              } else {
+                throw retryError;
+              }
+            }
+          }
+        } else {
+          // Gemini fallback - estimate tokens from prompt and response
+          const geminiModel = this.genAI.getGenerativeModel({ model: this.visionModel });
+          let retryCount = 0;
+          const maxRetries = 3;
+          const baseDelay = 1000;
+
+          let result;
+          while (retryCount <= maxRetries) {
+            try {
+              result = await geminiModel.generateContent(prompt);
+              break;
+            } catch (retryError: any) {
+              const isRateLimited = retryError.message?.includes('429') ||
+                                    retryError.message?.includes('quota') ||
+                                    retryError.message?.includes('rate');
+
+              if (isRateLimited && retryCount < maxRetries) {
+                retryCount++;
+                const delay = (baseDelay * Math.pow(2, retryCount - 1)) + Math.random() * 500;
+                this.logger.warn(`Gemini rate limited, retry ${retryCount}/${maxRetries} in ${Math.round(delay)}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              } else {
+                throw retryError;
+              }
+            }
+          }
+
+          if (!result) {
+            throw new Error('Failed to get response from Gemini after retries');
+          }
+
+          text = result.response.text().trim();
+
+          // Estimate tokens for Gemini (no direct usage API in current SDK)
+          totalInputTokens += estimateTokens(prompt);
+          totalOutputTokens += estimateTokens(text);
+        }
+
+        // Parse and process results
+        const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const batchResults = JSON.parse(jsonText);
+
+        if (Array.isArray(batchResults)) {
+          batchResults.forEach((item) => {
+            if (item.id && (typeof item.score_rti === 'number' || typeof item.match === 'boolean')) {
+              const originalProduct = batch.find(p => p.id === item.id);
+              const originalScore = originalProduct?.score || 0;
+              const scoreRti = item.score_rti ?? (item.match ? 0.85 : 0.10);
+              const categoria = item.categoria || (item.match ? 'SUSTITUTO_PERFECTO' : 'IRRELEVANTE');
+              const adjustedScore = (scoreRti * 0.70) + (originalScore * 0.30);
+
+              results.push({
+                id: item.id,
+                match: scoreRti >= 0.50,
+                confidence: scoreRti,
+                score_rti: scoreRti,
+                categoria_rti: categoria,
+                reason: item.reason || 'Sin razón',
+                adjustedScore,
+              });
+            }
+          });
+        }
+
+        // Delay between batches
+        if (i + batchSize < products.length) {
+          const delayMs = this.openaiClient ? 100 : 300;
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+
+      const provider = this.openaiClient ? 'OpenAI GPT-4o' : 'Gemini';
+      this.logger.log(`[${provider}] RTI filtered ${products.length} products: ${results.filter(r => r.match).length} matches | Tokens: ${totalInputTokens} in / ${totalOutputTokens} out`);
+
+      return {
+        results,
+        usage: {
+          model,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          totalTokens: totalInputTokens + totalOutputTokens,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Failed to filter search results with tracking: ${error.message}`);
+      const isRateLimited = error.message?.includes('429') || error.message?.includes('quota');
+      const reason = isRateLimited
+        ? 'LLM no disponible (rate limit) - usando score vectorial'
+        : `Error en filtrado RTI: ${error.message}`;
+
+      return {
+        results: products.map(p => ({
+          id: p.id,
+          match: p.score >= 0.65,
+          confidence: p.score,
+          score_rti: p.score,
+          categoria_rti: 'FALLBACK_VECTORIAL',
+          reason,
+          adjustedScore: p.score,
+        })),
+        usage: {
+          model,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          totalTokens: totalInputTokens + totalOutputTokens,
+        },
+      };
     }
   }
 

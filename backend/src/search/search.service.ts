@@ -2,6 +2,13 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { GeminiEmbeddingService } from '../embeddings/gemini-embedding.service';
 import { QdrantService } from '../qdrant/qdrant.service';
 import { DatasourcesService } from '../datasources/datasources.service';
+import {
+  TokenUsage,
+  CostBreakdown,
+  SearchCostTracking,
+  calculateCost,
+  aggregateCosts,
+} from '../common/cost-tracking';
 
 /**
  * Calculate Levenshtein distance between two strings
@@ -302,9 +309,11 @@ export class SearchService implements OnModuleInit {
       // Step 4: Build Qdrant filter for hybrid search (includes payload filters)
       const qdrantFilter = this.buildQdrantFilter(keywords, payloadFilters);
 
-      // Step 5: Generate embedding from attention-structured query
+      // Step 5: Generate embedding from attention-structured query (with cost tracking)
       this.logger.debug('Generating embedding from attention query...');
-      const embedding = await this.geminiService.generateEmbedding(attentionQuery);
+      const embeddingResult = await this.geminiService.generateEmbeddingWithTracking(attentionQuery);
+      const embedding = embeddingResult.embedding;
+      const embeddingUsage = embeddingResult.usage;
 
       // Step 6: Calculate search limit based on mode
       // LLM ON: fetch 2x candidates for LLM to evaluate and rerank
@@ -378,6 +387,7 @@ export class SearchService implements OnModuleInit {
 
       // Step 7: LLM Semantic Filter OR Vectorial Filter
       let semanticallyFiltered: any[];
+      let llmUsage: TokenUsage | null = null; // Track LLM token usage for cost calculation
 
       if (useLLMFilter) {
         this.logger.log('LLM Filter ENABLED - Evaluating ALL candidates with RTI...');
@@ -396,10 +406,12 @@ export class SearchService implements OnModuleInit {
 
         this.logger.log(`Sending ${productsForLLM.length} candidates to LLM for RTI evaluation`);
 
-        // Use enhanced query (includes marca if present) for LLM evaluation
-        const llmResults = await this.geminiService.filterSearchResults(enhancedQuery, productsForLLM);
+        // Use enhanced query (includes marca if present) for LLM evaluation with cost tracking
+        const llmFilterResult = await this.geminiService.filterSearchResultsWithTracking(enhancedQuery, productsForLLM);
+        const llmResults = llmFilterResult.results;
+        llmUsage = llmFilterResult.usage;
         const llmFilterDuration = Date.now() - llmFilterStart;
-        this.logger.log(`LLM filter completed in ${llmFilterDuration}ms - evaluated ${llmResults.length} products`);
+        this.logger.log(`LLM filter completed in ${llmFilterDuration}ms - evaluated ${llmResults.length} products | Tokens: ${llmUsage.inputTokens} in / ${llmUsage.outputTokens} out`);
 
         // Create a map of LLM evaluations
         const llmEvaluationMap = new Map(llmResults.map(r => [r.id, r]));
@@ -475,7 +487,16 @@ export class SearchService implements OnModuleInit {
             score: r.score,
           }));
 
-          const fallbackLLMResults = await this.geminiService.filterSearchResults(enhancedQuery, fallbackProductsForLLM);
+          const fallbackLLMFilterResult = await this.geminiService.filterSearchResultsWithTracking(enhancedQuery, fallbackProductsForLLM);
+          const fallbackLLMResults = fallbackLLMFilterResult.results;
+          // Accumulate LLM usage from fallback
+          if (llmUsage) {
+            llmUsage.inputTokens += fallbackLLMFilterResult.usage.inputTokens;
+            llmUsage.outputTokens += fallbackLLMFilterResult.usage.outputTokens;
+            llmUsage.totalTokens += fallbackLLMFilterResult.usage.totalTokens;
+          } else {
+            llmUsage = fallbackLLMFilterResult.usage;
+          }
           const fallbackLLMMap = new Map(fallbackLLMResults.map(r => [r.id, r]));
 
           semanticallyFiltered = fallbackSearchResults
@@ -597,6 +618,12 @@ export class SearchService implements OnModuleInit {
               ? `El cliente ${cliente} no ha comprado ninguno de estos productos. Mostrando todos los resultados.`
               : `Mostrando ${finalResults.filter(r => r._vendido_a_cliente).length} productos vendidos al cliente ${cliente}.`,
         }),
+        // Cost tracking - shows token usage and estimated costs
+        cost: (() => {
+          const embeddingCost = calculateCost(embeddingUsage);
+          const llmCost = llmUsage ? calculateCost(llmUsage) : null;
+          return aggregateCosts(embeddingCost, llmCost);
+        })(),
         results: finalResults.map((result) => {
           // Calcular RTI info - usar LLM si existe, sino inferir del score vectorial
           const rtiInfo = result._rti_categoria
@@ -1476,6 +1503,9 @@ export class SearchService implements OnModuleInit {
     let marcaCorrectedTo = '';
     let marcaAutocorrectMessage = '';
 
+    // Accumulate costs from all collection searches
+    let aggregatedCost: SearchCostTracking | null = null;
+
     try {
       // Search in each collection in parallel
       const searchPromises = collectionNames.map(async (collectionName) => {
@@ -1495,6 +1525,33 @@ export class SearchService implements OnModuleInit {
           if (result.marca_fallback && !marcaFallbackApplied) {
             marcaFallbackApplied = true;
             marcaFallbackMessage = result.marca_fallback_message;
+          }
+
+          // Capture and aggregate costs from each collection search
+          if (result.cost) {
+            if (!aggregatedCost) {
+              aggregatedCost = result.cost;
+            } else {
+              // Add costs from this collection to the aggregate
+              aggregatedCost.embedding.inputTokens += result.cost.embedding.inputTokens;
+              aggregatedCost.embedding.outputTokens += result.cost.embedding.outputTokens;
+              aggregatedCost.embedding.inputCostUsd += result.cost.embedding.inputCostUsd;
+              aggregatedCost.embedding.outputCostUsd += result.cost.embedding.outputCostUsd;
+              aggregatedCost.embedding.totalCostUsd += result.cost.embedding.totalCostUsd;
+
+              if (result.cost.llmFilter && aggregatedCost.llmFilter) {
+                aggregatedCost.llmFilter.inputTokens += result.cost.llmFilter.inputTokens;
+                aggregatedCost.llmFilter.outputTokens += result.cost.llmFilter.outputTokens;
+                aggregatedCost.llmFilter.inputCostUsd += result.cost.llmFilter.inputCostUsd;
+                aggregatedCost.llmFilter.outputCostUsd += result.cost.llmFilter.outputCostUsd;
+                aggregatedCost.llmFilter.totalCostUsd += result.cost.llmFilter.totalCostUsd;
+              } else if (result.cost.llmFilter) {
+                aggregatedCost.llmFilter = { ...result.cost.llmFilter };
+              }
+
+              aggregatedCost.totalCostUsd += result.cost.totalCostUsd;
+              aggregatedCost.totalTokens += result.cost.totalTokens;
+            }
           }
 
           // Add collection name to each result
@@ -1575,6 +1632,8 @@ export class SearchService implements OnModuleInit {
         total_results: allResults.length,
         filtered_by_relevancia: filteredCount,
         collection_stats: collectionStats,
+        // Cost tracking - aggregated from all collection searches
+        cost: aggregatedCost,
         results: finalResults,
       };
     } catch (error) {
