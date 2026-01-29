@@ -728,6 +728,108 @@
           }
         }
       ]
+    },
+    {
+      "name": "7. SCORE CANDIDATES (Validar Resultados de Buscadores)",
+      "description": "Evaluar candidatos de buscadores externos (ERP, keyword search) usando similitud semantica. Rapido (~100ms), sin costo de LLM.",
+      "item": [
+        {
+          "name": "Score candidates - Basico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"LLAVE MIXTA 13MM\",\n  \"collection\": \"catalogo_efc\",\n  \"candidateIds\": [\n    \"ABC123\",\n    \"DEF456\",\n    \"GHI789\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/score-candidates",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "search", "score-candidates"]
+            },
+            "description": "Evalua candidatos de un buscador externo contra una consulta usando embeddings + cosine similarity.\n\n**Caso de uso:**\nEl ERP devuelve 20 resultados por keyword search. Este endpoint los evalua semanticamente para filtrar falsos positivos.\n\n**Parametros:**\n- `query` (requerido): Texto de busqueda\n- `collection` (requerido): Coleccion en Qdrant\n- `candidateIds` (requerido): Array de IDs a evaluar (max 50)\n\n**Respuesta:**\n- `results`: Array de { id, score } ordenados por score descendente\n- `duration`: Tiempo de respuesta\n\n**Performance:**\n- Sin LLM ($0 costo)\n- ~100-200ms\n- Usa embeddings existentes en Qdrant"
+          }
+        },
+        {
+          "name": "Score candidates - Ejemplo real con 10 candidatos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"DESTORNILLADOR PHILLIPS #2 STANLEY\",\n  \"collection\": \"catalogo_efc\",\n  \"candidateIds\": [\n    \"16020028\",\n    \"16020029\",\n    \"16020030\",\n    \"16020031\",\n    \"16020032\",\n    \"16020033\",\n    \"16020034\",\n    \"16020035\",\n    \"16020036\",\n    \"16020037\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/score-candidates",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "search", "score-candidates"]
+            },
+            "description": "Ejemplo con 10 candidatos reales.\n\n**Interpretacion del score:**\n- >= 0.85: Match exacto o muy similar\n- 0.70-0.84: Producto relacionado\n- 0.50-0.69: Misma categoria pero diferente\n- < 0.50: Falso positivo, filtrar"
+          }
+        },
+        {
+          "name": "Score candidates - Filtrar resultados de ERP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"TALADRO INALAMBRICO 20V DEWALT\",\n  \"collection\": \"catalogo_stock\",\n  \"candidateIds\": [\n    \"TOOL-001\",\n    \"TOOL-002\",\n    \"TOOL-003\",\n    \"PAINT-001\",\n    \"SCREW-001\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/score-candidates",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "search", "score-candidates"]
+            },
+            "description": "Ejemplo donde el ERP devuelve resultados mezclados (herramientas, pinturas, tornillos).\n\nEl endpoint asigna scores bajos a productos irrelevantes (PAINT-001, SCREW-001) permitiendo filtrarlos."
+          }
+        },
+        {
+          "name": "Score candidates - Maximo 50 candidatos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"LLAVE STILSON 18 PULGADAS\",\n  \"collection\": \"catalogo_efc\",\n  \"candidateIds\": [\n    \"ID001\", \"ID002\", \"ID003\", \"ID004\", \"ID005\",\n    \"ID006\", \"ID007\", \"ID008\", \"ID009\", \"ID010\",\n    \"ID011\", \"ID012\", \"ID013\", \"ID014\", \"ID015\",\n    \"ID016\", \"ID017\", \"ID018\", \"ID019\", \"ID020\",\n    \"ID021\", \"ID022\", \"ID023\", \"ID024\", \"ID025\",\n    \"ID026\", \"ID027\", \"ID028\", \"ID029\", \"ID030\",\n    \"ID031\", \"ID032\", \"ID033\", \"ID034\", \"ID035\",\n    \"ID036\", \"ID037\", \"ID038\", \"ID039\", \"ID040\",\n    \"ID041\", \"ID042\", \"ID043\", \"ID044\", \"ID045\",\n    \"ID046\", \"ID047\", \"ID048\", \"ID049\", \"ID050\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/search/score-candidates",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "search", "score-candidates"]
+            },
+            "description": "Ejemplo con el maximo de 50 candidatos permitidos.\n\n**Limite:** Maximo 50 candidateIds por request para mantener performance optima."
+          }
+        }
+      ]
     }
   ]
 }
