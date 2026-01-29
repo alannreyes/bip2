@@ -1756,5 +1756,96 @@ export class SearchService implements OnModuleInit {
     }
   }
 
+  /**
+   * Score candidate products against a query using embeddings + cosine similarity
+   * Used to validate/filter results from external search systems (e.g., ERP keyword search)
+   *
+   * This endpoint is optimized for speed:
+   * - No LLM calls ($0 cost, ~100ms response time)
+   * - Uses existing embeddings from Qdrant (no embedding generation for candidates)
+   * - Only generates one embedding for the query
+   *
+   * @param query - The search query text
+   * @param collectionName - Qdrant collection containing the candidates
+   * @param candidateIds - Array of product IDs (codigo_original) to score (max 50)
+   * @returns Array of { id, score } sorted by score descending
+   */
+  async scoreCandidates(
+    query: string,
+    collectionName: string,
+    candidateIds: string[],
+  ): Promise<{ results: Array<{ id: string; score: number }>; duration: string }> {
+    const startTime = Date.now();
+    this.logger.log(`Scoring ${candidateIds.length} candidates against query: "${query}"`);
+
+    try {
+      // Step 1: Generate embedding for the query
+      const queryEmbedding = await this.geminiService.generateEmbedding(query);
+
+      // Step 2: Retrieve candidates with their vectors from Qdrant
+      const candidates = await this.qdrantService.getPointsByIdsWithVectors(
+        collectionName,
+        candidateIds,
+      );
+
+      if (candidates.length === 0) {
+        this.logger.warn(`No candidates found in collection ${collectionName}`);
+        return {
+          results: [],
+          duration: `${Date.now() - startTime}ms`,
+        };
+      }
+
+      // Step 3: Calculate cosine similarity for each candidate
+      const scoredResults = candidates.map((candidate) => {
+        const score = this.cosineSimilarity(queryEmbedding, candidate.vector);
+        return {
+          id: candidate.id,
+          score: parseFloat(score.toFixed(4)),
+        };
+      });
+
+      // Step 4: Sort by score descending
+      scoredResults.sort((a, b) => b.score - a.score);
+
+      const duration = `${Date.now() - startTime}ms`;
+      this.logger.log(`Scored ${scoredResults.length} candidates in ${duration}`);
+
+      return {
+        results: scoredResults,
+        duration,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to score candidates: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate cosine similarity between two vectors
+   */
+  private cosineSimilarity(vec1: number[], vec2: number[]): number {
+    if (vec1.length !== vec2.length) {
+      throw new Error('Vectors must have the same length');
+    }
+
+    let dotProduct = 0;
+    let norm1 = 0;
+    let norm2 = 0;
+
+    for (let i = 0; i < vec1.length; i++) {
+      dotProduct += vec1[i] * vec2[i];
+      norm1 += vec1[i] * vec1[i];
+      norm2 += vec2[i] * vec2[i];
+    }
+
+    const denominator = Math.sqrt(norm1) * Math.sqrt(norm2);
+    if (denominator === 0) {
+      return 0;
+    }
+
+    return dotProduct / denominator;
+  }
+
   // SECURITY: getSearchCompletionMessage() removed - was only used by searchInternetStream()
 }
