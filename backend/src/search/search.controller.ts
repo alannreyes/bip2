@@ -12,6 +12,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SearchService } from './search.service';
 import { SearchByTextDto } from './dto/search-by-text.dto';
+import { ScoreCandidatesDto } from './dto/score-candidates.dto';
 import { QdrantService } from '../qdrant/qdrant.service';
 
 @Controller('search')
@@ -153,6 +154,60 @@ export class SearchController {
       dto.query,
       dto.collections,
       dto.limit || 20,
+    );
+  }
+
+  /**
+   * Score candidate products against a query using embeddings + cosine similarity
+   *
+   * Use case: Validate results from external search systems (e.g., ERP keyword search)
+   * to filter out false positives and rank by semantic relevance.
+   *
+   * Performance:
+   * - No LLM calls ($0 cost)
+   * - ~100-200ms response time
+   * - Uses existing embeddings from Qdrant
+   *
+   * Example:
+   * POST /api/search/score-candidates
+   * {
+   *   "query": "LLAVE MIXTA 13MM",
+   *   "collection": "catalogo_efc",
+   *   "candidateIds": ["ABC123", "DEF456", "GHI789"]
+   * }
+   *
+   * Response:
+   * {
+   *   "results": [
+   *     { "id": "ABC123", "score": 0.9234 },
+   *     { "id": "GHI789", "score": 0.7856 },
+   *     { "id": "DEF456", "score": 0.4521 }
+   *   ],
+   *   "duration": "127ms"
+   * }
+   */
+  @Post('score-candidates')
+  async scoreCandidates(@Body() dto: ScoreCandidatesDto) {
+    if (!dto.query) {
+      throw new BadRequestException('Query text is required');
+    }
+
+    if (!dto.collection) {
+      throw new BadRequestException('Collection name is required');
+    }
+
+    if (!dto.candidateIds || dto.candidateIds.length === 0) {
+      throw new BadRequestException('At least one candidate ID is required');
+    }
+
+    if (dto.candidateIds.length > 50) {
+      throw new BadRequestException('Maximum 50 candidate IDs allowed');
+    }
+
+    return await this.searchService.scoreCandidates(
+      dto.query,
+      dto.collection,
+      dto.candidateIds,
     );
   }
 
