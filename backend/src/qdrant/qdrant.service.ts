@@ -452,6 +452,50 @@ export class QdrantService {
     }
   }
 
+  /**
+   * Get multiple points by IDs with their vectors
+   * Used for scoring candidates against a query embedding
+   *
+   * @param collectionName - The collection to retrieve from
+   * @param pointIds - Array of point IDs to retrieve
+   * @returns Array of points with id, vector, and payload
+   */
+  async getPointsByIdsWithVectors(
+    collectionName: string,
+    pointIds: string[],
+    qdrantHost?: string,
+    qdrantPort?: number,
+  ): Promise<Array<{ id: string; vector: number[]; payload: any }>> {
+    try {
+      const client = this.getClientForDatasource(qdrantHost, qdrantPort);
+
+      this.logger.debug(`Retrieving ${pointIds.length} points with vectors from ${collectionName}`);
+
+      const result = await client.retrieve(collectionName, {
+        ids: pointIds,
+        with_payload: true,
+        with_vector: true,
+      });
+
+      if (!result || result.length === 0) {
+        this.logger.warn(`No points found in collection ${collectionName}`);
+        return [];
+      }
+
+      const points = result.map((point: any) => ({
+        id: String(point.id),
+        vector: point.vector as number[],
+        payload: point.payload || {},
+      }));
+
+      this.logger.log(`Retrieved ${points.length} points with vectors from ${collectionName}`);
+      return points;
+    } catch (error) {
+      this.logger.error(`Failed to retrieve points with vectors: ${error.message}`);
+      throw new BadRequestException(`Failed to retrieve points: ${error.message}`);
+    }
+  }
+
   getClient(): QdrantClient {
     return this.client;
   }
