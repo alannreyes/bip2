@@ -1,0 +1,733 @@
+{
+  "info": {
+    "name": "BIP2 - Duplicados y Comparacion de Productos",
+    "description": "Coleccion completa para deteccion de duplicados, comparacion de productos y validacion de existencia usando busqueda vectorial con Qdrant.\n\n## Casos de Uso\n\n1. **Detectar duplicados masivos**: Encontrar productos similares en toda la coleccion\n2. **Validar antes de crear**: Verificar si un producto ya existe antes de agregarlo\n3. **Comparar dos productos**: Obtener score de similitud entre dos descripciones\n4. **Analizar producto especifico**: Ver todos los productos similares a uno dado\n\n## Parametros Comunes\n\n- `similarityThreshold`: Umbral de similitud (0.0 a 1.0). Default: 0.95\n- `useLLMFilter` / `useAiClassification`: Usar IA (GPT-4o) para clasificacion semantica\n- `dateFilter`: Filtrar por rango de fechas\n- `excludeCodes`: Excluir codigos especificos de los resultados\n\n## Colecciones Disponibles\n\n- `catalogo_stock` - Catalogo principal de stock\n- `catalogo_efc` - Catalogo EFC\n\n---\n\n**Version:** 1.0.0\n**Base URL:** http://192.168.40.197:3001/api",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. DETECTAR DUPLICADOS",
+      "description": "Endpoints para detectar grupos de productos duplicados en una coleccion",
+      "item": [
+        {
+          "name": "Detectar duplicados - Basico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"similarityThreshold\": 0.95,\n  \"limit\": 50\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/detect",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "detect"]
+            },
+            "description": "Detecta grupos de productos duplicados en una coleccion.\n\n**Parametros:**\n- `collection` (requerido): Nombre de la coleccion en Qdrant\n- `similarityThreshold`: Umbral de similitud (default: 0.95 = 95%)\n- `limit`: Maximo de grupos a retornar (default: 50)\n\n**Respuesta:** Lista de grupos de duplicados con sus scores de similitud"
+          }
+        },
+        {
+          "name": "Detectar duplicados - Con umbral bajo (0.85)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"similarityThreshold\": 0.85,\n  \"limit\": 100\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/detect",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "detect"]
+            },
+            "description": "Detecta duplicados con umbral mas bajo para encontrar productos \"parecidos\" pero no identicos.\n\nUmbral 0.85 encuentra:\n- Productos con descripciones similares pero no identicas\n- Variantes de un mismo producto\n- Posibles errores de captura"
+          }
+        },
+        {
+          "name": "Detectar duplicados - Con clasificacion IA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"similarityThreshold\": 0.90,\n  \"limit\": 30,\n  \"useAiClassification\": true\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/detect",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "detect"]
+            },
+            "description": "Usa GPT-4o para clasificar semanticamente los duplicados encontrados.\n\n**Nota:** Mas lento pero mas preciso. Clasifica si realmente son duplicados o solo similares.\n\n**Costo aproximado:** ~$0.01 por grupo analizado"
+          }
+        },
+        {
+          "name": "Detectar duplicados - Con filtro de fecha",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"similarityThreshold\": 0.90,\n  \"limit\": 50,\n  \"dateFilter\": {\n    \"field\": \"Articulo_Fecha_Modificacion\",\n    \"from\": \"2025-11-01\",\n    \"to\": \"2025-12-31\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/detect",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "detect"]
+            },
+            "description": "Detecta duplicados solo entre productos modificados en un rango de fechas.\n\n**Caso de uso:** Revisar duplicados en productos recien agregados o modificados.\n\n**Campos de fecha comunes:**\n- `Articulo_Fecha_Modificacion`\n- `Articulo_Fecha_Alta`\n- `fecha_actualizacion`"
+          }
+        },
+        {
+          "name": "Detectar duplicados - Con filtros de categoria",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"similarityThreshold\": 0.90,\n  \"limit\": 50,\n  \"filters\": {\n    \"linea\": \"HERRAMIENTAS\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/detect",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "detect"]
+            },
+            "description": "Detecta duplicados solo dentro de una linea/categoria especifica.\n\n**Filtros disponibles:**\n- `linea`\n- `familia`\n- `sub_familia`\n- `categoria`\n\nUsa el endpoint GET /filter-values para ver valores disponibles."
+          }
+        },
+        {
+          "name": "Detectar duplicados - Catalogo EFC",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_efc\",\n  \"similarityThreshold\": 0.92,\n  \"limit\": 50\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/detect",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "detect"]
+            },
+            "description": "Detecta duplicados en el catalogo EFC."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. ANALIZAR PRODUCTO",
+      "description": "Encontrar todos los productos similares a uno especifico",
+      "item": [
+        {
+          "name": "Analizar duplicados de un producto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"productId\": \"16020028\",\n  \"similarityThreshold\": 0.85\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/analyze-product",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "analyze-product"]
+            },
+            "description": "Dado un producto especifico, encuentra todos los productos similares en la coleccion.\n\n**Parametros:**\n- `collection` (requerido): Nombre de la coleccion\n- `productId` (requerido): ID/codigo del producto a analizar\n- `similarityThreshold`: Umbral minimo de similitud (default: 0.90)\n\n**Respuesta:** Lista de productos similares ordenados por score de similitud"
+          }
+        },
+        {
+          "name": "Analizar producto - Umbral alto (0.95)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"productId\": \"16020028\",\n  \"similarityThreshold\": 0.95\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/analyze-product",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "analyze-product"]
+            },
+            "description": "Busca solo duplicados casi identicos (95%+ similitud)."
+          }
+        },
+        {
+          "name": "Analizar producto - Umbral bajo (0.75)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"productId\": \"16020028\",\n  \"similarityThreshold\": 0.75\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/analyze-product",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "analyze-product"]
+            },
+            "description": "Busca productos relacionados con umbral bajo.\n\nUtil para encontrar:\n- Productos de la misma familia\n- Variantes o complementos\n- Productos que podrian agruparse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. VALIDAR EXISTENCIA",
+      "description": "Verificar si un producto ya existe antes de crearlo",
+      "item": [
+        {
+          "name": "Validar si producto existe - Basico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE MIXTA 13MM STANLEY\",\n  \"similarityThreshold\": 0.85\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "validate-exists"]
+            },
+            "description": "Valida si ya existe un producto con descripcion similar antes de agregarlo al catalogo.\n\n**Parametros:**\n- `collection` (requerido): Nombre de la coleccion\n- `descripcion` (requerido): Descripcion del producto a validar\n- `similarityThreshold`: Umbral de similitud (default: 0.90)\n\n**Respuesta:** Lista de productos existentes que coinciden"
+          }
+        },
+        {
+          "name": "Validar existencia - Con marca",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE MIXTA 13MM\",\n  \"marca\": \"STANLEY\",\n  \"similarityThreshold\": 0.85\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "validate-exists"]
+            },
+            "description": "Valida existencia incluyendo la marca para mayor precision."
+          }
+        },
+        {
+          "name": "Validar existencia - Con marca y modelo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE MIXTA 13MM\",\n  \"marca\": \"STANLEY\",\n  \"modelo\": \"87-013\",\n  \"similarityThreshold\": 0.85\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "validate-exists"]
+            },
+            "description": "Validacion completa con descripcion, marca y modelo."
+          }
+        },
+        {
+          "name": "Validar existencia - Con filtro de fecha",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"DESTORNILLADOR PHILLIPS #2 STANLEY\",\n  \"marca\": \"STANLEY\",\n  \"similarityThreshold\": 0.85,\n  \"dateFilter\": {\n    \"field\": \"Articulo_Fecha_Modificacion\",\n    \"from\": \"2025-01-01\",\n    \"to\": \"2025-12-31\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "validate-exists"]
+            },
+            "description": "Valida existencia solo entre productos de un periodo especifico.\n\n**Caso de uso:** Verificar si el producto fue agregado recientemente."
+          }
+        },
+        {
+          "name": "Validar existencia - Excluyendo codigos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"LLAVE MIXTA 13MM STANLEY\",\n  \"marca\": \"STANLEY\",\n  \"similarityThreshold\": 0.85,\n  \"excludeCodes\": [\"16020028\", \"16020029\", \"16020030\"]\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "validate-exists"]
+            },
+            "description": "Excluye codigos especificos de la busqueda de duplicados.\n\n**Casos de uso:**\n- Ignorar variantes conocidas\n- Excluir productos ya revisados\n- Ignorar el producto actual al buscar duplicados"
+          }
+        },
+        {
+          "name": "Validar existencia - Completo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"TALADRO INALAMBRICO 20V DEWALT\",\n  \"marca\": \"DEWALT\",\n  \"modelo\": \"DCD771C2\",\n  \"similarityThreshold\": 0.80,\n  \"dateFilter\": {\n    \"field\": \"Articulo_Fecha_Alta\",\n    \"from\": \"2024-01-01\"\n  },\n  \"excludeCodes\": [\"DEWALT-001\"]\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "validate-exists"]
+            },
+            "description": "Ejemplo completo con todos los parametros disponibles."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. COMPARAR PRODUCTOS",
+      "description": "Comparar dos descripciones de productos directamente",
+      "item": [
+        {
+          "name": "Comparar dos productos - Basico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion1\": \"DESTORNILLADOR PHILLIPS #2 STANLEY\",\n  \"descripcion2\": \"DESARMADOR CRUZ NUMERO 2 STANLEY\"\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/compare",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "compare"]
+            },
+            "description": "Compara dos descripciones de productos y retorna su score de similitud.\n\n**Parametros:**\n- `descripcion1` (requerido): Primera descripcion\n- `descripcion2` (requerido): Segunda descripcion\n\n**Respuesta:**\n- `similarity`: Score de similitud (0.0 a 1.0)\n- `isDuplicate`: Si se considera duplicado segun umbral default"
+          }
+        },
+        {
+          "name": "Comparar productos - Con marcas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion1\": \"LLAVE MIXTA 13MM\",\n  \"descripcion2\": \"LLAVE COMBINADA 13 MILIMETROS\",\n  \"marca1\": \"STANLEY\",\n  \"marca2\": \"STANLEY\"\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/compare",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "compare"]
+            },
+            "description": "Compara incluyendo las marcas para mayor precision en la comparacion."
+          }
+        },
+        {
+          "name": "Comparar productos - Marcas diferentes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion1\": \"LLAVE MIXTA 13MM\",\n  \"descripcion2\": \"LLAVE MIXTA 13MM\",\n  \"marca1\": \"STANLEY\",\n  \"marca2\": \"TRUPER\"\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/compare",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "compare"]
+            },
+            "description": "Compara productos identicos pero de marcas diferentes.\n\n**Nota:** Aunque la descripcion sea igual, marcas diferentes = productos diferentes."
+          }
+        },
+        {
+          "name": "Comparar productos - Con analisis LLM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion1\": \"DESTORNILLADOR PHILLIPS #2 STANLEY 6 PULGADAS\",\n  \"descripcion2\": \"DESARMADOR DE CRUZ No. 2 STANLEY 150MM\",\n  \"marca1\": \"STANLEY\",\n  \"marca2\": \"STANLEY\",\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/compare",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "compare"]
+            },
+            "description": "Usa GPT-4o para analisis semantico profundo.\n\n**Respuesta adicional:**\n- `llmAnalysis`: Explicacion del LLM sobre la similitud\n- `llmConfidence`: Confianza del modelo\n- `llmClassification`: DUPLICATE, SIMILAR, o DIFFERENT\n\n**Costo:** ~$0.01 por comparacion"
+          }
+        },
+        {
+          "name": "Comparar productos - Ejemplo: Mismo producto, diferente formato",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion1\": \"MARTILLO UNA Y BOLA 16OZ STANLEY\",\n  \"descripcion2\": \"MARTILLO DE BOLA 16 ONZAS STANLEY\",\n  \"marca1\": \"STANLEY\",\n  \"marca2\": \"STANLEY\",\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/compare",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "compare"]
+            },
+            "description": "Ejemplo de productos que son el mismo pero escritos diferente."
+          }
+        },
+        {
+          "name": "Comparar productos - Ejemplo: Productos similares pero diferentes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion1\": \"TALADRO ROTOMARTILLO 1/2 DEWALT 20V\",\n  \"descripcion2\": \"TALADRO ATORNILLADOR 1/2 DEWALT 20V\",\n  \"marca1\": \"DEWALT\",\n  \"marca2\": \"DEWALT\",\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/compare",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "compare"]
+            },
+            "description": "Ejemplo de productos similares pero que NO son duplicados (rotomartillo vs atornillador)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. REPORTES Y UTILIDADES",
+      "description": "Reportes y consultas de soporte",
+      "item": [
+        {
+          "name": "Reporte de duplicados - catalogo_stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/report?collection=catalogo_stock",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "report"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "catalogo_stock"
+                }
+              ]
+            },
+            "description": "Genera un reporte resumido de duplicados en la coleccion.\n\n**Respuesta:**\n- Total de productos\n- Total de grupos de duplicados\n- Productos afectados\n- Porcentaje de duplicacion\n- Top grupos mas grandes"
+          }
+        },
+        {
+          "name": "Reporte de duplicados - catalogo_efc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/report?collection=catalogo_efc",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "report"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "catalogo_efc"
+                }
+              ]
+            },
+            "description": "Genera reporte de duplicados para catalogo EFC."
+          }
+        },
+        {
+          "name": "Obtener valores de filtros disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/filter-values?collection=catalogo_stock",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "filter-values"],
+              "query": [
+                {
+                  "key": "collection",
+                  "value": "catalogo_stock"
+                }
+              ]
+            },
+            "description": "Obtiene los valores unicos disponibles para filtros.\n\n**Campos incluidos:**\n- `linea`: Lineas de producto disponibles\n- `familia`: Familias disponibles\n- `sub_familia`: Sub-familias disponibles\n- `categoria`: Categorias disponibles\n\nUseful para construir filtros en deteccion de duplicados."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. CASOS DE USO COMUNES",
+      "description": "Ejemplos listos para escenarios reales",
+      "item": [
+        {
+          "name": "Caso: Revisar duplicados de productos nuevos (ultimo mes)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"similarityThreshold\": 0.88,\n  \"limit\": 100,\n  \"dateFilter\": {\n    \"field\": \"Articulo_Fecha_Alta\",\n    \"from\": \"2025-12-01\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/detect",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "detect"]
+            },
+            "description": "Revisa duplicados solo entre productos dados de alta en el ultimo mes."
+          }
+        },
+        {
+          "name": "Caso: Validar producto antes de capturar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"descripcion\": \"PINZA DE PRESION 10 PULGADAS VISE GRIP\",\n  \"marca\": \"IRWIN\",\n  \"similarityThreshold\": 0.80\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/validate-exists",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "validate-exists"]
+            },
+            "description": "Antes de capturar un nuevo producto, valida si ya existe en el catalogo."
+          }
+        },
+        {
+          "name": "Caso: Limpiar duplicados en linea HERRAMIENTAS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"similarityThreshold\": 0.92,\n  \"limit\": 200,\n  \"useAiClassification\": true,\n  \"filters\": {\n    \"linea\": \"HERRAMIENTAS\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/detect",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "detect"]
+            },
+            "description": "Detecta y clasifica duplicados en la linea de herramientas usando IA."
+          }
+        },
+        {
+          "name": "Caso: Encontrar variantes de un producto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection\": \"catalogo_stock\",\n  \"productId\": \"STANLEY-001\",\n  \"similarityThreshold\": 0.70\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/analyze-product",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "analyze-product"]
+            },
+            "description": "Con umbral bajo (0.70), encuentra productos relacionados/variantes, no solo duplicados exactos."
+          }
+        },
+        {
+          "name": "Caso: Verificar si descripcion en espanol/ingles son duplicados",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion1\": \"ADJUSTABLE WRENCH 12 INCH CHROME\",\n  \"descripcion2\": \"LLAVE AJUSTABLE 12 PULGADAS CROMADA\",\n  \"useLLMFilter\": true\n}"
+            },
+            "url": {
+              "raw": "http://192.168.40.197:3001/api/duplicates/compare",
+              "protocol": "http",
+              "host": ["192.168.40.197"],
+              "port": "3001",
+              "path": ["api", "duplicates", "compare"]
+            },
+            "description": "El LLM puede detectar duplicados aunque esten en diferentes idiomas."
+          }
+        }
+      ]
+    }
+  ]
+}
