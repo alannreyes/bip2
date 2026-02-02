@@ -474,7 +474,7 @@ export class QdrantService {
       const result = await client.retrieve(collectionName, {
         ids: pointIds,
         with_payload: true,
-        with_vector: true,
+        with_vectors: true,
       });
 
       if (!result || result.length === 0) {
@@ -482,9 +482,12 @@ export class QdrantService {
         return [];
       }
 
+      // Manejo robusto del campo vector (puede venir en distintos formatos según versión de Qdrant)
       const points = result.map((point: any) => ({
         id: String(point.id),
-        vector: point.vector as number[],
+        vector: Array.isArray(point.vector)
+          ? point.vector
+          : point.vector?.data || point.vectors?.vector,
         payload: point.payload || {},
       }));
 
