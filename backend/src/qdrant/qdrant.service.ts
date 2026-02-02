@@ -467,49 +467,41 @@ export class QdrantService {
     qdrantPort?: number,
   ): Promise<Array<{ id: string; vector: number[]; payload: any }>> {
     try {
-      const client = this.getClientForDatasource(qdrantHost, qdrantPort);
-
       this.logger.debug(`Retrieving ${pointIds.length} points with vectors from ${collectionName}`);
 
-      const result = await client.retrieve(collectionName, {
-        ids: pointIds,
-        with_payload: true,
-        with_vectors: true,
+      // Llamada directa a la API REST de Qdrant porque el cliente JS no pasa with_vector correctamente
+      const host = qdrantHost || this.configService.get('QDRANT_HOST');
+      const port = qdrantPort || this.configService.get('QDRANT_PORT');
+      const url = `http://${host}:${port}/collections/${collectionName}/points`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ids: pointIds,
+          with_payload: true,
+          with_vector: true,
+        }),
       });
 
-      if (!result || result.length === 0) {
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Qdrant API error ${response.status}: ${errorBody}`);
+      }
+
+      const data = await response.json();
+      const result = data.result || [];
+
+      if (result.length === 0) {
         this.logger.warn(`No points found in collection ${collectionName}`);
         return [];
       }
 
-      // Log para diagnosticar estructura del vector
-      if (result.length > 0) {
-        const sample = result[0] as any;
-        this.logger.debug(`Point keys: ${Object.keys(sample)}, vector type: ${typeof sample.vector}, vectors type: ${typeof sample.vectors}`);
-        if (sample.vectors) {
-          this.logger.debug(`vectors value: ${JSON.stringify(sample.vectors).substring(0, 200)}`);
-        }
-      }
-
-      // Manejo robusto del campo vector (puede venir en distintos formatos según versión de Qdrant)
-      const points = result.map((point: any) => {
-        let vector = point.vector;
-        if (!vector || (typeof vector !== 'object' && !Array.isArray(vector))) {
-          // with_vectors devuelve en point.vectors
-          const vectors = point.vectors;
-          if (Array.isArray(vectors)) {
-            vector = vectors;
-          } else if (vectors && typeof vectors === 'object') {
-            // Named vectors: point.vectors[""] o point.vectors.vector_name
-            vector = vectors[''] || Object.values(vectors)[0];
-          }
-        }
-        return {
-          id: String(point.id),
-          vector: vector as number[],
-          payload: point.payload || {},
-        };
-      });
+      const points = result.map((point: any) => ({
+        id: String(point.id),
+        vector: point.vector as number[],
+        payload: point.payload || {},
+      }));
 
       this.logger.log(`Retrieved ${points.length} points with vectors from ${collectionName}`);
       return points;
