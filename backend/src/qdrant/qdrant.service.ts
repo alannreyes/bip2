@@ -482,14 +482,34 @@ export class QdrantService {
         return [];
       }
 
+      // Log para diagnosticar estructura del vector
+      if (result.length > 0) {
+        const sample = result[0] as any;
+        this.logger.debug(`Point keys: ${Object.keys(sample)}, vector type: ${typeof sample.vector}, vectors type: ${typeof sample.vectors}`);
+        if (sample.vectors) {
+          this.logger.debug(`vectors value: ${JSON.stringify(sample.vectors).substring(0, 200)}`);
+        }
+      }
+
       // Manejo robusto del campo vector (puede venir en distintos formatos según versión de Qdrant)
-      const points = result.map((point: any) => ({
-        id: String(point.id),
-        vector: Array.isArray(point.vector)
-          ? point.vector
-          : point.vector?.data || point.vectors?.vector,
-        payload: point.payload || {},
-      }));
+      const points = result.map((point: any) => {
+        let vector = point.vector;
+        if (!vector || (typeof vector !== 'object' && !Array.isArray(vector))) {
+          // with_vectors devuelve en point.vectors
+          const vectors = point.vectors;
+          if (Array.isArray(vectors)) {
+            vector = vectors;
+          } else if (vectors && typeof vectors === 'object') {
+            // Named vectors: point.vectors[""] o point.vectors.vector_name
+            vector = vectors[''] || Object.values(vectors)[0];
+          }
+        }
+        return {
+          id: String(point.id),
+          vector: vector as number[],
+          payload: point.payload || {},
+        };
+      });
 
       this.logger.log(`Retrieved ${points.length} points with vectors from ${collectionName}`);
       return points;
