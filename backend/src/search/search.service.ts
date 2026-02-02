@@ -2,6 +2,9 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { GeminiEmbeddingService } from '../embeddings/gemini-embedding.service';
 import { QdrantService } from '../qdrant/qdrant.service';
 import { DatasourcesService } from '../datasources/datasources.service';
+import { v5 as uuidv5 } from 'uuid';
+
+const PRODUCT_CODE_NAMESPACE = 'b3c3e1c0-4d3e-4b3a-9c3e-1c0d3e4b3a9c';
 import {
   TokenUsage,
   CostBreakdown,
@@ -1782,10 +1785,11 @@ export class SearchService implements OnModuleInit {
       // Step 1: Generate embedding for the query
       const queryEmbedding = await this.geminiService.generateEmbedding(query);
 
-      // Step 2: Retrieve candidates with their vectors from Qdrant
+      // Step 2: Convert candidate IDs to Qdrant UUIDs and retrieve with vectors
+      const uuidIds = candidateIds.map(id => uuidv5(id, PRODUCT_CODE_NAMESPACE));
       const candidates = await this.qdrantService.getPointsByIdsWithVectors(
         collectionName,
-        candidateIds,
+        uuidIds,
       );
 
       if (candidates.length === 0) {
@@ -1800,7 +1804,7 @@ export class SearchService implements OnModuleInit {
       const scoredResults = candidates.map((candidate) => {
         const score = this.cosineSimilarity(queryEmbedding, candidate.vector);
         return {
-          id: candidate.id,
+          id: candidate.payload?._original_id || candidate.payload?.id || candidate.id,
           score: parseFloat(score.toFixed(4)),
         };
       });
