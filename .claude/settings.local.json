@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:api.qdrant.tech)",
+      "WebFetch(domain:qdrant.tech)"
+    ]
+  }
+}
