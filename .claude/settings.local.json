@@ -3,7 +3,12 @@
     "allow": [
       "WebSearch",
       "WebFetch(domain:api.qdrant.tech)",
-      "WebFetch(domain:qdrant.tech)"
+      "WebFetch(domain:qdrant.tech)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit --pretty)",
+      "Bash(npm run:*)",
+      "Bash(ls node_modules/.bin/nest*)",
+      "Bash(ls node_modules/@nestjs/cli/bin/)"
     ]
   }
 }

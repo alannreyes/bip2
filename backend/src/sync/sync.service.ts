@@ -319,37 +319,33 @@ export class SyncService {
     let resumeOffset = 0;
     let resumeSource = 'none';
 
-    // PRIORIDAD 1: Si el job actual tiene registros procesados, usarlos
+    // PRIORIDAD 1: Si el job actual tiene registros procesados (retry del mismo job)
     if (job.processedRecords > 0 && job.totalRecords && job.processedRecords < job.totalRecords) {
       resumeOffset = job.processedRecords;
       resumeSource = 'current_job';
       this.logger.log(`🔄 RESTART DETECTED: Current job ${jobId} has ${job.processedRecords}/${job.totalRecords} processed records (${Math.round((job.processedRecords / job.totalRecords) * 100)}%)`);
     }
-    // PRIORIDAD 2: Si Qdrant tiene puntos, usar eso como offset (fuente de verdad)
-    else if (qdrantPointsCount && qdrantPointsCount > 0) {
-      resumeOffset = qdrantPointsCount;
-      resumeSource = 'qdrant_points';
-      this.logger.log(`🎯 QDRANT RESUME: Found ${qdrantPointsCount} existing points in Qdrant - using as resume offset`);
-    }
-    // PRIORIDAD 3: Buscar job anterior con progreso
+    // PRIORIDAD 2: Buscar job anterior INTERRUMPIDO recientemente (< 1 hora)
     else if (job.processedRecords === 0 || job.status === 'pending') {
-      // IMPORTANT: Exclude current job and find the most recent one with progress
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
       const previousJob = await this.syncJobRepository
         .createQueryBuilder('job')
         .where('job.datasourceId = :datasourceId', { datasourceId: job.datasourceId })
         .andWhere('job.type = :type', { type: job.type })
         .andWhere('job.id != :currentJobId', { currentJobId: jobId })
         .andWhere('job.processedRecords > 0')
+        .andWhere('job.status IN (:...statuses)', { statuses: ['failed', 'running'] })
+        .andWhere('job.createdAt > :oneHourAgo', { oneHourAgo })
         .orderBy('job.createdAt', 'DESC')
         .getOne();
 
-      if (previousJob && previousJob.processedRecords > 0) {
+      if (previousJob && previousJob.processedRecords > 0 && previousJob.totalRecords && previousJob.processedRecords < previousJob.totalRecords) {
         resumeOffset = previousJob.processedRecords;
         resumeSource = 'previous_job';
-        const progressPercent = previousJob.totalRecords
-          ? Math.round((previousJob.processedRecords / previousJob.totalRecords) * 100)
-          : 0;
-        this.logger.log(`🔍 INHERITED RESUME: Found previous job ${previousJob.id} with ${previousJob.processedRecords} records (${progressPercent}%)`);
+        const progressPercent = Math.round((previousJob.processedRecords / previousJob.totalRecords) * 100);
+        this.logger.log(`🔍 INHERITED RESUME: Found recent interrupted job ${previousJob.id} with ${previousJob.processedRecords}/${previousJob.totalRecords} records (${progressPercent}%)`);
+      } else {
+        this.logger.log(`📊 Qdrant has ${qdrantPointsCount || 0} existing points, but starting full sync from beginning to capture any new/changed records`);
       }
     }
 
